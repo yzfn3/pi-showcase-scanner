@@ -1,0 +1,372 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Pi Showcase Scanner manifest v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "scan_id",
+    "status",
+    "created_at",
+    "projection",
+    "units",
+    "rotation_period_s",
+    "scene_extent_m",
+    "cameras",
+    "frames"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "scan_id": {
+      "type": "string",
+      "pattern": "^scan_[0-9]{8}_[0-9]{6}(_[A-Za-z0-9]+)?$"
+    },
+    "status": {
+      "enum": [
+        "capturing",
+        "complete",
+        "failed"
+      ]
+    },
+    "source": {
+      "type": "string"
+    },
+    "mock_mode": {
+      "type": "boolean"
+    },
+    "timing": {
+      "enum": [
+        "simulated",
+        "measured",
+        "monotonic_deadlines"
+      ]
+    },
+    "delay_between_steps_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000
+    },
+    "files": {
+      "type": "array",
+      "maxItems": 10032,
+      "items": {
+        "type": "object",
+        "required": [
+          "file",
+          "size_bytes",
+          "sha256"
+        ],
+        "properties": {
+          "file": {
+            "type": "string",
+            "pattern": "^(raw|raw_combined|backgrounds)/[A-Za-z0-9_-]+\\.jpg$"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 52428800
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      }
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "projection": {
+      "const": "orthographic"
+    },
+    "units": {
+      "const": "meters"
+    },
+    "rotation_period_s": {
+      "type": "number",
+      "minimum": 0.001,
+      "maximum": 86400
+    },
+    "rotation_direction": {
+      "const": "positive_y_right_hand"
+    },
+    "scene_extent_m": {
+      "type": "number",
+      "minimum": 0.001,
+      "maximum": 100
+    },
+    "cameras": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "azimuth_deg",
+          "elevation_deg",
+          "ortho_width_m"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^cam_[0-9]{2}$"
+          },
+          "azimuth_deg": {
+            "type": "number",
+            "minimum": -360,
+            "maximum": 360
+          },
+          "elevation_deg": {
+            "type": "number",
+            "minimum": -89,
+            "maximum": 89
+          },
+          "ortho_width_m": {
+            "type": "number",
+            "minimum": 0.001,
+            "maximum": 1000
+          },
+          "distance_m": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "height_m": {
+            "type": "number"
+          },
+          "preview_crop": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "background": {
+            "type": "string",
+            "pattern": "^backgrounds/[^\\\\]+\\.(jpg|jpeg|png)$"
+          }
+        }
+      }
+    },
+    "frames": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "required": [
+          "file",
+          "camera_id",
+          "step",
+          "timestamp_s",
+          "angle_deg"
+        ],
+        "properties": {
+          "file": {
+            "type": "string",
+            "pattern": "^raw/[^\\\\]+\\.(jpg|jpeg|png)$"
+          },
+          "camera_id": {
+            "type": "string",
+            "pattern": "^cam_[0-9]{2}$"
+          },
+          "step": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "captured_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "timestamp_s": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 86400
+          },
+          "angle_deg": {
+            "type": "number",
+            "minimum": -360000,
+            "maximum": 360000
+          }
+        }
+      }
+    },
+    "combined_frames": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "required": [
+          "file",
+          "camera_id",
+          "step",
+          "timestamp_s",
+          "angle_deg"
+        ],
+        "properties": {
+          "file": {
+            "type": "string",
+            "pattern": "^raw_combined/[^\\\\]+\\.(jpg|jpeg|png)$"
+          },
+          "camera_id": {
+            "type": "string",
+            "pattern": "^cam_[0-9]{2}$"
+          },
+          "step": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "captured_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "timestamp_s": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 86400
+          },
+          "angle_deg": {
+            "type": "number",
+            "minimum": -360000,
+            "maximum": 360000
+          }
+        }
+      }
+    },
+    "combined_quad_output": {
+      "type": "boolean"
+    },
+    "split_combined_output": {
+      "type": "boolean"
+    },
+    "backgrounds_available": {
+      "type": "boolean"
+    },
+    "preview_ready": {
+      "type": "boolean"
+    },
+    "geometry_calibrated": {
+      "type": "boolean"
+    },
+    "raw_files": {
+      "type": "array"
+    },
+    "raw_combined_files": {
+      "type": "array"
+    },
+    "errors": {
+      "type": "array"
+    },
+    "capture_logs": {
+      "type": "array"
+    },
+    "warnings": {
+      "type": "array"
+    },
+    "backend": {
+      "type": "string"
+    },
+    "software_version": {
+      "type": "string"
+    },
+    "camera_command": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "rotation_seconds": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "capture_interval_seconds": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "capture_width": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "capture_height": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "camera_count": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4
+    },
+    "steps": {
+      "type": "integer",
+      "minimum": 3,
+      "maximum": 120
+    },
+    "capture_started_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "capture_completed_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "outputs": {
+      "type": "object"
+    },
+    "settings": {
+      "type": "object"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "complete"
+          }
+        }
+      },
+      "then": {
+        "anyOf": [
+          {
+            "properties": {
+              "frames": {
+                "minItems": 1
+              }
+            }
+          },
+          {
+            "required": [
+              "combined_quad_output",
+              "combined_frames"
+            ],
+            "properties": {
+              "combined_quad_output": {
+                "const": true
+              },
+              "split_combined_output": {
+                "const": false
+              },
+              "frames": {
+                "maxItems": 0
+              },
+              "combined_frames": {
+                "minItems": 1
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

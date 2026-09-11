@@ -1,0 +1,388 @@
+{
+  "schema_version": 1,
+  "scan_id": "scan_20260910_120000",
+  "status": "complete",
+  "source": "synthetic",
+  "created_at": "2026-09-10T12:00:00+00:00",
+  "projection": "orthographic",
+  "units": "meters",
+  "rotation_period_s": 60.0,
+  "rotation_direction": "positive_y_right_hand",
+  "scene_extent_m": 0.24,
+  "cameras": [
+    {
+      "id": "cam_01",
+      "azimuth_deg": -35,
+      "elevation_deg": 5,
+      "distance_m": 0.5,
+      "height_m": 0.0436,
+      "ortho_width_m": 0.3,
+      "background": "backgrounds/cam_01.jpg"
+    },
+    {
+      "id": "cam_02",
+      "azimuth_deg": -12,
+      "elevation_deg": 15,
+      "distance_m": 0.5,
+      "height_m": 0.1294,
+      "ortho_width_m": 0.3,
+      "background": "backgrounds/cam_02.jpg"
+    },
+    {
+      "id": "cam_03",
+      "azimuth_deg": 12,
+      "elevation_deg": 25,
+      "distance_m": 0.5,
+      "height_m": 0.2113,
+      "ortho_width_m": 0.3,
+      "background": "backgrounds/cam_03.jpg"
+    },
+    {
+      "id": "cam_04",
+      "azimuth_deg": 35,
+      "elevation_deg": 35,
+      "distance_m": 0.5,
+      "height_m": 0.2868,
+      "ortho_width_m": 0.3,
+      "background": "backgrounds/cam_04.jpg"
+    }
+  ],
+  "frames": [
+    {
+      "file": "raw/step_000_cam_01.jpg",
+      "camera_id": "cam_01",
+      "step": 0,
+      "timestamp_s": 0.0,
+      "angle_deg": 0.0
+    },
+    {
+      "file": "raw/step_000_cam_02.jpg",
+      "camera_id": "cam_02",
+      "step": 0,
+      "timestamp_s": 0.0,
+      "angle_deg": 0.0
+    },
+    {
+      "file": "raw/step_000_cam_03.jpg",
+      "camera_id": "cam_03",
+      "step": 0,
+      "timestamp_s": 0.0,
+      "angle_deg": 0.0
+    },
+    {
+      "file": "raw/step_000_cam_04.jpg",
+      "camera_id": "cam_04",
+      "step": 0,
+      "timestamp_s": 0.0,
+      "angle_deg": 0.0
+    },
+    {
+      "file": "raw/step_001_cam_01.jpg",
+      "camera_id": "cam_01",
+      "step": 1,
+      "timestamp_s": 5.0,
+      "angle_deg": 30.0
+    },
+    {
+      "file": "raw/step_001_cam_02.jpg",
+      "camera_id": "cam_02",
+      "step": 1,
+      "timestamp_s": 5.0,
+      "angle_deg": 30.0
+    },
+    {
+      "file": "raw/step_001_cam_03.jpg",
+      "camera_id": "cam_03",
+      "step": 1,
+      "timestamp_s": 5.0,
+      "angle_deg": 30.0
+    },
+    {
+      "file": "raw/step_001_cam_04.jpg",
+      "camera_id": "cam_04",
+      "step": 1,
+      "timestamp_s": 5.0,
+      "angle_deg": 30.0
+    },
+    {
+      "file": "raw/step_002_cam_01.jpg",
+      "camera_id": "cam_01",
+      "step": 2,
+      "timestamp_s": 10.0,
+      "angle_deg": 60.0
+    },
+    {
+      "file": "raw/step_002_cam_02.jpg",
+      "camera_id": "cam_02",
+      "step": 2,
+      "timestamp_s": 10.0,
+      "angle_deg": 60.0
+    },
+    {
+      "file": "raw/step_002_cam_03.jpg",
+      "camera_id": "cam_03",
+      "step": 2,
+      "timestamp_s": 10.0,
+      "angle_deg": 60.0
+    },
+    {
+      "file": "raw/step_002_cam_04.jpg",
+      "camera_id": "cam_04",
+      "step": 2,
+      "timestamp_s": 10.0,
+      "angle_deg": 60.0
+    },
+    {
+      "file": "raw/step_003_cam_01.jpg",
+      "camera_id": "cam_01",
+      "step": 3,
+      "timestamp_s": 15.0,
+      "angle_deg": 90.0
+    },
+    {
+      "file": "raw/step_003_cam_02.jpg",
+      "camera_id": "cam_02",
+      "step": 3,
+      "timestamp_s": 15.0,
+      "angle_deg": 90.0
+    },
+    {
+      "file": "raw/step_003_cam_03.jpg",
+      "camera_id": "cam_03",
+      "step": 3,
+      "timestamp_s": 15.0,
+      "angle_deg": 90.0
+    },
+    {
+      "file": "raw/step_003_cam_04.jpg",
+      "camera_id": "cam_04",
+      "step": 3,
+      "timestamp_s": 15.0,
+      "angle_deg": 90.0
+    },
+    {
+      "file": "raw/step_004_cam_01.jpg",
+      "camera_id": "cam_01",
+      "step": 4,
+      "timestamp_s": 20.0,
+      "angle_deg": 120.0
+    },
+    {
+      "file": "raw/step_004_cam_02.jpg",
+      "camera_id": "cam_02",
+      "step": 4,
+      "timestamp_s": 20.0,
+      "angle_deg": 120.0
+    },
+    {
+      "file": "raw/step_004_cam_03.jpg",
+      "camera_id": "cam_03",
+      "step": 4,
+      "timestamp_s": 20.0,
+      "angle_deg": 120.0
+    },
+    {
+      "file": "raw/step_004_cam_04.jpg",
+      "camera_id": "cam_04",
+      "step": 4,
+      "timestamp_s": 20.0,
+      "angle_deg": 120.0
+    },
+    {
+      "file": "raw/step_005_cam_01.jpg",
+      "camera_id": "cam_01",
+      "step": 5,
+      "timestamp_s": 25.0,
+      "angle_deg": 150.0
+    },
+    {
+      "file": "raw/step_005_cam_02.jpg",
+      "camera_id": "cam_02",
+      "step": 5,
+      "timestamp_s": 25.0,
+      "angle_deg": 150.0
+    },
+    {
+      "file": "raw/step_005_cam_03.jpg",
+      "camera_id": "cam_03",
+      "step": 5,
+      "timestamp_s": 25.0,
+      "angle_deg": 150.0
+    },
+    {
+      "file": "raw/step_005_cam_04.jpg",
+      "camera_id": "cam_04",
+      "step": 5,
+      "timestamp_s": 25.0,
+      "angle_deg": 150.0
+    },
+    {
+      "file": "raw/step_006_cam_01.jpg",
+      "camera_id": "cam_01",
+      "step": 6,
+      "timestamp_s": 30.0,
+      "angle_deg": 180.0
+    },
+    {
+      "file": "raw/step_006_cam_02.jpg",
+      "camera_id": "cam_02",
+      "step": 6,
+      "timestamp_s": 30.0,
+      "angle_deg": 180.0
+    },
+    {
+      "file": "raw/step_006_cam_03.jpg",
+      "camera_id": "cam_03",
+      "step": 6,
+      "timestamp_s": 30.0,
+      "angle_deg": 180.0
+    },
+    {
+      "file": "raw/step_006_cam_04.jpg",
+      "camera_id": "cam_04",
+      "step": 6,
+      "timestamp_s": 30.0,
+      "angle_deg": 180.0
+    },
+    {
+      "file": "raw/step_007_cam_01.jpg",
+      "camera_id": "cam_01",
+      "step": 7,
+      "timestamp_s": 35.0,
+      "angle_deg": 210.0
+    },
+    {
+      "file": "raw/step_007_cam_02.jpg",
+      "camera_id": "cam_02",
+      "step": 7,
+      "timestamp_s": 35.0,
+      "angle_deg": 210.0
+    },
+    {
+      "file": "raw/step_007_cam_03.jpg",
+      "camera_id": "cam_03",
+      "step": 7,
+      "timestamp_s": 35.0,
+      "angle_deg": 210.0
+    },
+    {
+      "file": "raw/step_007_cam_04.jpg",
+      "camera_id": "cam_04",
+      "step": 7,
+      "timestamp_s": 35.0,
+      "angle_deg": 210.0
+    },
+    {
+      "file": "raw/step_008_cam_01.jpg",
+      "camera_id": "cam_01",
+      "step": 8,
+      "timestamp_s": 40.0,
+      "angle_deg": 240.0
+    },
+    {
+      "file": "raw/step_008_cam_02.jpg",
+      "camera_id": "cam_02",
+      "step": 8,
+      "timestamp_s": 40.0,
+      "angle_deg": 240.0
+    },
+    {
+      "file": "raw/step_008_cam_03.jpg",
+      "camera_id": "cam_03",
+      "step": 8,
+      "timestamp_s": 40.0,
+      "angle_deg": 240.0
+    },
+    {
+      "file": "raw/step_008_cam_04.jpg",
+      "camera_id": "cam_04",
+      "step": 8,
+      "timestamp_s": 40.0,
+      "angle_deg": 240.0
+    },
+    {
+      "file": "raw/step_009_cam_01.jpg",
+      "camera_id": "cam_01",
+      "step": 9,
+      "timestamp_s": 45.0,
+      "angle_deg": 270.0
+    },
+    {
+      "file": "raw/step_009_cam_02.jpg",
+      "camera_id": "cam_02",
+      "step": 9,
+      "timestamp_s": 45.0,
+      "angle_deg": 270.0
+    },
+    {
+      "file": "raw/step_009_cam_03.jpg",
+      "camera_id": "cam_03",
+      "step": 9,
+      "timestamp_s": 45.0,
+      "angle_deg": 270.0
+    },
+    {
+      "file": "raw/step_009_cam_04.jpg",
+      "camera_id": "cam_04",
+      "step": 9,
+      "timestamp_s": 45.0,
+      "angle_deg": 270.0
+    },
+    {
+      "file": "raw/step_010_cam_01.jpg",
+      "camera_id": "cam_01",
+      "step": 10,
+      "timestamp_s": 50.0,
+      "angle_deg": 300.0
+    },
+    {
+      "file": "raw/step_010_cam_02.jpg",
+      "camera_id": "cam_02",
+      "step": 10,
+      "timestamp_s": 50.0,
+      "angle_deg": 300.0
+    },
+    {
+      "file": "raw/step_010_cam_03.jpg",
+      "camera_id": "cam_03",
+      "step": 10,
+      "timestamp_s": 50.0,
+      "angle_deg": 300.0
+    },
+    {
+      "file": "raw/step_010_cam_04.jpg",
+      "camera_id": "cam_04",
+      "step": 10,
+      "timestamp_s": 50.0,
+      "angle_deg": 300.0
+    },
+    {
+      "file": "raw/step_011_cam_01.jpg",
+      "camera_id": "cam_01",
+      "step": 11,
+      "timestamp_s": 55.0,
+      "angle_deg": 330.0
+    },
+    {
+      "file": "raw/step_011_cam_02.jpg",
+      "camera_id": "cam_02",
+      "step": 11,
+      "timestamp_s": 55.0,
+      "angle_deg": 330.0
+    },
+    {
+      "file": "raw/step_011_cam_03.jpg",
+      "camera_id": "cam_03",
+      "step": 11,
+      "timestamp_s": 55.0,
+      "angle_deg": 330.0
+    },
+    {
+      "file": "raw/step_011_cam_04.jpg",
+      "camera_id": "cam_04",
+      "step": 11,
+      "timestamp_s": 55.0,
+      "angle_deg": 330.0
+    }
+  ]
+}

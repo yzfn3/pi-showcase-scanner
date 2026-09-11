@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Local Raspberry Pi turntable scan preview and reconstruction workspace.">
+  <title>Pi Showcase Scanner</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/photos.css">
+  <script src="/viewer.js" defer></script>
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header><div class="brand"><span class="mark">◈</span><div>Pi Showcase <strong>Scanner</strong></div></div><span class="local"><i></i> LOCAL WORKSPACE</span></header>
+  <main>
+    <aside>
+      <div class="eyebrow">01 / CAPTURE</div>
+      <h1>From images<br>to an object.</h1>
+      <p class="intro">Four cameras. One turntable.<br>A fast first look in 3D.</p>
+      <button id="generate" class="primary">＋ Generate test scan</button>
+      <div class="import-group"><label for="import-path">Import a scan folder</label><input id="import-path" placeholder="C:\captures\scan_20260910_120000" autocomplete="off"><button id="import">Import folder</button></div>
+      <div class="library-head"><label for="scans">Scan library</label><button id="refresh" class="text-button">Refresh</button></div>
+      <select id="scans"><option value="">No scans yet</option></select>
+      <p id="scan-info" class="muted">Generate a test scan to get started.</p>
+      <label for="frame-limit">Images for quick preview</label>
+      <div class="frame-controls"><input id="frame-limit" type="number" min="1" max="10000" step="1" value="24" aria-describedby="frame-help"><button id="use-all" disabled>Use all</button></div>
+      <p id="frame-help" class="small">All images are used by default. Reduce the count for a faster run.</p>
+      <label for="quality">Geometry detail</label>
+      <select id="quality"><option value="32">Fast — coarse</option><option value="96" selected>Detailed — recommended</option><option value="160">Fine — slower</option></select>
+      <p class="small">Finer geometry keeps smaller features. Hidden recesses still need full photogrammetry.</p>
+      <button id="run" class="primary" disabled>Run preview <span>→</span></button>
+      <button id="done" disabled>Done — delete this generation</button>
+      <p class="small">Each test scan creates a random object. Generated images and models are deleted on the next generation or Done. Download any model you want to keep first.</p>
+      <p class="small">Synthetic scans use 48 images over one 60-second rotation. No cameras required.</p>
+      <details><summary>Scan library location</summary><p id="root" class="path"></p></details>
+    </aside>
+    <section class="workspace">
+      <div class="view-heading"><div><div class="eyebrow">02 / QUICK PREVIEW</div><h2>Object viewport</h2></div><span id="state" class="tag">AWAITING SCAN</span></div>
+      <div class="viewport">
+        <canvas id="canvas" tabindex="0" aria-label="Interactive 3D preview. Drag or use arrow keys to rotate. Scroll or use plus and minus to zoom. R resets the view."></canvas>
+        <div id="empty"><div class="outline">◇</div><strong>Your first scan starts here</strong><p>Generate or import images, then run the preview.</p></div>
+        <div class="view-controls"><span>Y ↑ &nbsp; · &nbsp; meters</span><button id="reset" class="text-button">Reset view</button></div>
+      </div>
+      <div class="viewer-footer"><span>Drag to orbit · Scroll to zoom · Arrow keys to rotate</span><span id="geometry-info">Silhouette reconstruction</span></div>
+      <div class="metrics"><div><span>IMAGES USED</span><strong id="images">—</strong></div><div><span>QUICK PREVIEW</span><strong id="elapsed">—</strong></div><div><span>TRIANGLES</span><strong id="triangles">—</strong></div></div>
+      <details id="photos-panel" class="photos-panel">
+        <summary>View source photos <span id="photo-count"></span></summary>
+        <p class="muted">Low-resolution previews of generated or imported photos. Badges show what the last quick reconstruction actually used.</p>
+        <div class="photo-toolbar"><label for="photo-filter">Show</label><select id="photo-filter"><option value="all">All captured photos</option><option value="used">Used in last quick preview</option><option value="backgrounds">Background references</option></select></div>
+        <p id="photo-summary" class="muted" role="status">Select a scan to inspect its photos.</p>
+        <div id="photo-grid" class="photo-grid"></div>
+        <div class="photo-pages"><button id="photos-prev" disabled>Previous</button><span id="photo-page"></span><button id="photos-next" disabled>Next</button></div>
+      </details>
+      <div class="outputs"><div><h3>Quick model</h3><p>Untextured, approximate geometry</p><div class="links"><a id="glb" hidden download>Download GLB ↗</a><a id="obj" hidden download>Download OBJ ↗</a></div></div><div><div class="eyebrow">03 / DETAILED RECONSTRUCTION</div><h3 id="detailed">Not prepared yet</h3><p id="detailed-info">The same images will be organized for a later reconstruction.</p><a id="detailed-link" hidden target="_blank" rel="noopener">Open preparation notes ↗</a></div></div>
+      <div id="status" role="status" aria-live="polite">Ready. Everything runs on this laptop.</div>
+    </section>
+  </main>
+  <dialog id="photo-dialog"><button id="photo-close" aria-label="Close photo preview">Close ×</button><img id="photo-large" alt=""><p id="photo-caption"></p><p class="muted">Preview only · maximum 640 pixels · original file stays unchanged.</p></dialog>
+  <footer>PI SHOWCASE / ENGINEERING DEMO <span>One Pi · Four cameras · 1 RPM</span></footer>
+</body>
+</html>
