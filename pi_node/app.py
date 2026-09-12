@@ -61,6 +61,28 @@ def create_app(root=None, backend=None):
         state = service.capture_backgrounds(request.get_json(), request.headers.get("Idempotency-Key"))
         return jsonify(**state, status_url=f"/api/v1/scan/status/{state['scan_id']}"), 202
 
+    @app.post("/api/v1/backgrounds/check")
+    def check_backgrounds():
+        import hashlib
+        import json
+        from pi_node.config import validate_request
+        params = validate_request(request.get_json(), getattr(service.backend, "name", "mock"))
+        try:
+            saved = json.loads((service.background_root / "index.json").read_text())
+            if saved["settings"] != service._background_settings(params):
+                raise ValueError("Background capture settings differ")
+            if not saved["images"]:
+                raise ValueError("No background images")
+            for entry in saved["images"]:
+                source = service.background_root / entry["name"]
+                if source.resolve().parent != service.background_root.resolve():
+                    raise ValueError("Invalid background path")
+                if hashlib.sha256(source.read_bytes()).hexdigest() != entry["sha256"]:
+                    raise ValueError("Background image changed")
+            return jsonify(matching=True, captured_at=saved["captured_at"])
+        except (OSError, ValueError, KeyError) as exc:
+            return jsonify(matching=False, reason=str(exc))
+
     @app.post("/api/v1/scan/start")
     def start():
         state = service.start(request.get_json(), request.headers.get("Idempotency-Key"))

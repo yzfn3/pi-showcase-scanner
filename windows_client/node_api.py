@@ -242,6 +242,14 @@ class NodeClient:
                         derived = json.loads(split_receipt.read_text(encoding="utf-8"))
                         valid_split = (source == manifest and derived.get("source_hash") == json_digest(source)
                                        and derived.get("manifest_hash") == json_digest(local))
+                    if not valid_split and local.get("full_photogrammetry_mode"):
+                        before = folder / "manifest.pre_full.json"
+                        full_receipt = folder / "full_receipt.json"
+                        if before.is_file() and full_receipt.is_file():
+                            source = json.loads(before.read_text(encoding="utf-8"))
+                            derived = json.loads(full_receipt.read_text(encoding="utf-8"))
+                            valid_split = (source == manifest and derived.get("source_hash") == json_digest(source)
+                                           and derived.get("manifest_hash") == json_digest(local))
                     if not valid_split:
                         raise NodeClientError("Local manifest was modified; refusing to overwrite it")
             for index, record in enumerate(records.values(), 1):

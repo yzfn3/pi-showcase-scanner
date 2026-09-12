@@ -1,5 +1,6 @@
 """Capture Pi images, receive and process a scan, and serve its local viewer."""
 import argparse
+import os
 import logging
 import sys
 import uuid
@@ -38,10 +39,24 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--node", required=True, help="http://raspberrypi.local:8000 or http://127.0.0.1:8000")
     parser.add_argument("--start-scan", action="store_true")
+    parser.add_argument("--full-scan", action="store_true")
+    parser.add_argument("--capture-backgrounds-first", action="store_true")
+    parser.add_argument("--skip-backgrounds", action="store_true")
+    colmap_group = parser.add_mutually_exclusive_group()
+    colmap_group.add_argument("--run-colmap", dest="run_colmap", action="store_true")
+    colmap_group.add_argument("--no-run-colmap", dest="run_colmap", action="store_false")
+    parser.set_defaults(run_colmap=True)
+    parser.add_argument("--dense", action="store_true")
+    parser.add_argument("--matcher", choices=("exhaustive", "sequential"), default="exhaustive")
+    parser.add_argument("--mask-threshold", type=int, default=25)
+    parser.add_argument("--mask-inspect", action="store_true")
+    parser.add_argument("--full-workspace-root", type=Path)
+    parser.add_argument("--preserve-originals", action="store_true")
+    parser.add_argument("--crop-mode", choices=("quadrants",), default="quadrants")
     parser.add_argument("--capture-backgrounds", action="store_true", help="Capture the empty table, then exit unless --start-scan is also supplied")
     parser.add_argument("--rotation-seconds", type=float, help="Physical rotation period (default 60); explicitly setting this also times mock scans")
-    parser.add_argument("--quad-split-config", type=Path, help="Local quad crop/order configuration")
-    parser.add_argument("--quality", choices=("fast", "detailed", "fine"), default="detailed")
+    parser.add_argument("--quad-split-config", "--quad-config", type=Path, help="Local quad crop/order configuration")
+    parser.add_argument("--quality", choices=("fast", "detailed", "fine", "full"), default=None)
     parser.add_argument("--combined-quad-output", action=argparse.BooleanOptionalAction, default=None)
     parser.add_argument("--split-combined-output", action="store_true", help="Reserved: rejected until the physical layout is verified")
     parser.add_argument("--use-backgrounds", action=argparse.BooleanOptionalAction, default=True)
@@ -56,7 +71,7 @@ def main(argv=None):
     parser.add_argument("--focus-mode")
     parser.add_argument("--lens-position", type=float, help="Focus in dioptres; requires lens support")
     parser.add_argument("--scan-id", help="Existing scan to receive, or an explicit new ID with --start-scan")
-    parser.add_argument("--steps", type=int, choices=range(3,121), metavar="3..120", default=12)
+    parser.add_argument("--steps", type=int, choices=range(3,121), metavar="3..120", default=None)
     parser.add_argument("--cameras", type=int, choices=range(1,5), default=4)
     parser.add_argument("--delay-between-steps-ms", type=int, choices=range(10001), metavar="0..10000", default=0)
     parser.add_argument("--root", type=Path, default=ROOT / "scans/received")
@@ -71,7 +86,23 @@ def main(argv=None):
     parser.add_argument("--no-browser", action="store_true", help="Serve the viewer and print its URL without opening a browser")
     parser.add_argument("--no-viewer", action="store_true", help="Finish after processing; print artifact paths and the reopen command")
     args = parser.parse_args(argv)
-    args.grid = args.grid or {"fast": 32, "detailed": 96, "fine": 160}[args.quality]
+    if args.full_scan:
+        args.start_scan = True
+        for key, value in dict(steps=24, rotation_seconds=60, capture_width=3840, capture_height=2160,
+                               focus_mode="auto", camera_timeout_ms=1000, quality="full", combined_quad_output=True).items():
+            if getattr(args, key) is None: setattr(args, key, value)
+        args.autofocus_on_capture = True
+        args.preserve_originals = True
+        args.split_combined_output = False  # Windows splits locally; the Pi flag is reserved.
+    args.steps = args.steps or 12
+    args.quality = args.quality or "detailed"
+    args.grid = args.grid or {"fast": 32, "detailed": 96, "fine": 160, "full": 96}[args.quality]
+    if args.skip_backgrounds:
+        args.use_backgrounds = False
+        if args.capture_backgrounds_first or args.capture_backgrounds:
+            parser.error("--skip-backgrounds conflicts with background capture")
+    if not 0 <= args.mask_threshold <= 255:
+        parser.error("--mask-threshold must be 0..255")
     if not args.start_scan and not args.scan_id and not args.capture_backgrounds:
         parser.error("Pass --start-scan, --capture-backgrounds, or --scan-id")
     if min(args.timeout, args.scan_timeout, args.transfer_timeout, args.poll_interval) <= 0:
@@ -93,11 +124,23 @@ def main(argv=None):
         settings.update(camera_timeout_ms=args.camera_timeout_ms, awbgains=args.awbgains,
                         autofocus_on_capture=args.autofocus_on_capture, use_backgrounds=args.use_backgrounds, split_combined_output=args.split_combined_output,
                         combined_quad_output=health.get("combined_quad_output", False) if args.combined_quad_output is None else args.combined_quad_output)
-        if args.capture_backgrounds:
+        background_needed = args.capture_backgrounds or args.capture_backgrounds_first
+        if args.full_scan and args.use_backgrounds and not background_needed:
+            availability = client.json("POST", "/backgrounds/check", body=dict(mode=mode, cameras=args.cameras, **settings))
+            background_needed = not availability["matching"]
+            if background_needed:
+                LOG.warning("Matching backgrounds unavailable: %s", availability.get("reason"))
+        if background_needed:
+            if args.full_scan and not health.get("mock_mode"):
+                if not sys.stdin.isatty():
+                    raise ValueError("Background capture needs an empty table. Capture backgrounds separately in an interactive terminal, or use --skip-backgrounds.")
+                input("Remove the object, leave the empty table in place, then press Enter to capture backgrounds: ")
             LOG.info("Capturing empty-table background references")
             background = client.capture_backgrounds(mode=mode, camera_count=args.cameras, **settings)
             client.wait(background["scan_id"], timeout=args.scan_timeout, poll_interval=args.poll_interval)
             print("Background references saved on the node under backgrounds/current/", flush=True)
+            if args.full_scan and not health.get("mock_mode"):
+                input("Replace the object and start the turntable, then press Enter to start the scan: ")
             if not args.start_scan and not args.scan_id:
                 return 0
         if args.start_scan:
@@ -111,6 +154,17 @@ def main(argv=None):
         scan = client.download_scan(sid, args.root, timeout=args.transfer_timeout)
         client.close()
         client = None
+        if args.full_scan:
+            from photogrammetry.workspace import prepare
+            result = prepare(scan, root=args.full_workspace_root, threshold=args.mask_threshold, inspect=True,
+                             run_colmap=args.run_colmap, dense=args.dense, matcher=args.matcher, quad_config=args.quad_split_config)
+            print("FULL WORKSPACE: " + result["full_workspace_path"], flush=True)
+            print("REPORT: " + result["report_path"], flush=True)
+            print("STATUS: " + result["colmap_status"], flush=True)
+            print(result["next_action"], flush=True)
+            if not args.no_browser and not args.no_viewer and hasattr(os, "startfile"):
+                os.startfile(result["full_workspace_path"])
+            return 1 if result["errors"] else 0
         result = process_scan(scan, grid=args.grid, max_frames=args.max_frames, quad_config=args.quad_split_config)
         for previous in scan.parent.glob("scan_*"):
             if previous != scan and is_generated(previous):

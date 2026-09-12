@@ -283,3 +283,16 @@ Both scan/start and backgrounds/capture accept camera_timeout_ms (integer 1–12
 The camera command uses the selected timeout, adds autofocus-on-capture unless focus_mode is continuous, and omits lens-position when that flag is requested unless focus_mode is manual. Auto mode emits both autofocus-mode auto and autofocus-on-capture. Continuous ignores the capture-focus request but preserves it in recorded settings. AWB defaults to auto; explicit awbgains is an advanced locked-gain option. No balanced or white AWB modes exist in this API.
 
 The subprocess watchdog adds camera timeout to its overhead/exposure allowance, so long settling periods are not killed by the old fixed watchdog. The scan scheduler is unchanged: a 5000 ms camera timeout plus command overhead may overrun a 5000 ms scan interval. Use fewer steps or a longer measured rotation period if the current missed-deadline check fires.
+
+## POST /api/v1/backgrounds/check
+
+Read-only check for reusable empty-table references. Accepts the same capture settings as scan start (including dimensions, cameras, combined mode, autofocus, timeout, exposure and AWB). Validates saved settings and image checksums; it does not capture or start a scan.
+
+Example request:
+```json
+{"mode":"rpicam","cameras":4,"combined_quad_output":true,"capture_width":3840,"capture_height":2160,"focus_mode":"auto","autofocus_on_capture":true,"camera_timeout_ms":1000,"awb":"auto"}
+```
+
+Response when reusable: `{"matching":true,"captured_at":"2026-09-12T18:00:00Z"}`.
+Response when absent/mismatched: `{"matching":false,"reason":"Background capture settings differ"}`.
+Invalid settings return the existing 400 error envelope. Update and restart the Pi node before using the new Windows full-scan command. Existing endpoints remain compatible.

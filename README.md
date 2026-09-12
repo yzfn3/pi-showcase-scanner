@@ -1,6 +1,6 @@
 # Pi Showcase Scanner
 
-A local engineering demo: **Pi capture (mock or rpicam) over HTTP → verified image transfer → coarse 3D model → browser viewer**, plus a separate image workspace for future detailed reconstruction. The original standalone synthetic flow is also available.
+A local engineering demo: **Pi capture (mock or rpicam) over HTTP â†’ verified image transfer â†’ coarse 3D model â†’ browser viewer**, plus a separate image workspace for future detailed reconstruction. The original standalone synthetic flow is also available.
 
 Windows 11, Python 3.11+, no camera hardware or cloud services required. Four direct Python dependencies: NumPy, Pillow, Flask, and requests (plus their supporting packages). The UI and WebGL viewer are bundled JavaScript/CSS; no CDN, npm, Node, or internet is needed at runtime.
 
@@ -13,13 +13,13 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-**Terminal 1 — mock Pi node:**
+**Terminal 1 â€” mock Pi node:**
 
 ```powershell
 .\.venv\Scripts\python.exe -m pi_node.app --host 127.0.0.1 --port 8000 --mock
 ```
 
-**Terminal 2 — capture, receive, reconstruct, and view:**
+**Terminal 2 â€” capture, receive, reconstruct, and view:**
 
 ```powershell
 .\.venv\Scripts\python.exe -m windows_client.client --node http://127.0.0.1:8000 --start-scan --steps 12
@@ -168,7 +168,7 @@ Replace example scan IDs with real folders. The default is now all available ima
 
 Each **Generate test scan** creates a new random object. A single shape seed is used across all views of that scan so reconstruction stays coherent. The Pi mock backend also changes its shape for every new scan ID.
 
-Generated demos now last until the next generation succeeds or you click **Done — delete this generation**. Cleanup deletes the entire generated folder, including raw/background images, GLB/OBJ files, and the detailed image copies. Download any model you want to keep first. Imports are marked for retention and are not automatically deleted. Re-running a preview uses the selected scan's existing images, so it reconstructs the same object.
+Generated demos now last until the next generation succeeds or you click **Done â€” delete this generation**. Cleanup deletes the entire generated folder, including raw/background images, GLB/OBJ files, and the detailed image copies. Download any model you want to keep first. Imports are marked for retention and are not automatically deleted. Re-running a preview uses the selected scan's existing images, so it reconstructs the same object.
 
 The Pi node removes old mock images after the next successful capture. Done also asks the original node to delete its copy; if it is offline, the local files are still deleted and the node cleans its old copy on its next scan. Small `.deleted/` records retain only request/idempotency metadata, not images or models. Deleted scans cannot be resumed. This cleanup policy supersedes the original indefinite-retention behavior described below.
 
@@ -238,9 +238,9 @@ Run one client against a given library. A per-scan lock prevents concurrent writ
 
 Choose **Geometry detail**, then **Run preview** to rebuild the selected scan:
 
-- **Fast**: 32³ grid, for the quickest coarse result.
-- **Detailed** (default): 96³ grid, finer features and smoother curves.
-- **Fine**: 160³ grid, more geometry at a higher processing and memory cost.
+- **Fast**: 32Â³ grid, for the quickest coarse result.
+- **Detailed** (default): 96Â³ grid, finer features and smoother curves.
+- **Fine**: 160Â³ grid, more geometry at a higher processing and memory cost.
 
 At the default 240 mm scene extent, these correspond to 7.5, 2.5, and 1.5 mm cells. These are sampling sizes, not guaranteed measurement accuracy. The viewer reports the grid used for the loaded result. Existing coarse results remain viewable; rerunning upgrades them. Image count remains independently adjustable.
 
@@ -248,20 +248,20 @@ The pipeline uses masks up to 640 pixels, rounds voxel stair steps with alternat
 
 This is still a silhouette visual hull: more detail improves visible outlines, but cannot recover recesses hidden in every silhouette, textures, or features absent from the images. Approximate camera calibration also limits real-photo accuracy. Full photogrammetry remains a later pipeline.
 
-For CLI use, set `--grid 96` (default) or `--grid 160`. The accepted range is 12–160. Use `--max-frames 0` (default) for all photos. Both options invalidate the cached result when changed.
+For CLI use, set `--grid 96` (default) or `--grid 160`. The accepted range is 12â€“160. Use `--max-frames 0` (default) for all photos. Both options invalidate the cached result when changed.
 
 ## What is implemented
 
 - Randomized synthetic sculptures, consistent across each scan's camera views, rendered from approximate orthographic geometry.
 - Background subtraction (or a border-color fallback when no background is supplied).
-- A configurable 12–160³ voxel grid (96³ by default), carved using all images by default.
+- A configurable 12â€“160Â³ voxel grid (96Â³ by default), carved using all images by default.
 - A shared-vertex, smoothed surface with smooth normals exported as **glTF 2.0 GLB**, **OBJ**, and the identical triangles in viewer JSON.
 - A browser viewer with orbit, zoom, reset, and model download links.
 - Detailed image staging, metadata, and preparation notes. **No heavy reconstruction runs.**
 - Local folder import, polling watcher, terminal logging, and `logs/scanner.log`.
 - Scan validation, content-based caching, background jobs, atomic completion markers, and useful failure messages.
 
-A measured 96³ preview on this laptop took about **0.65 seconds**, using all 48 input images and producing 18,540 triangles. This excludes synthetic generation, detailed image copying, and browser loading; your timing will vary. The UI reports its actual pipeline timing. `outputs/result.json` also records total processing time.
+A measured 96Â³ preview on this laptop took about **0.65 seconds**, using all 48 input images and producing 18,540 triangles. This excludes synthetic generation, detailed image copying, and browser loading; your timing will vary. The UI reports its actual pipeline timing. `outputs/result.json` also records total processing time.
 
 ## Layout
 
@@ -285,7 +285,7 @@ See [scan format](docs/scan-format.md), [architecture](docs/architecture.md), an
 
 This is a **visual hull**, not feature-based photogrammetry. It cannot recover hidden concavities or textures. Scale and pose are approximate. A background-free, centered, opaque object with contrast against its background works best. The MVP assumes orthographic images aimed at the scene origin; perspective distortion, the real table, shadows, inaccurate angles, or a drifting object can cause poor or empty models.
 
-The nominal table speed is one revolution per 60 seconds: `angle_deg = timestamp_s × 6` for ideal constant-speed motion. Twelve positions are five seconds / 30° apart. There is no duplicate 360° frame. Real captures should store measured or timestamp-derived angles per image, including offsets if cameras fire sequentially. A motor encoder and calibrated intrinsics/extrinsics are future upgrades.
+The nominal table speed is one revolution per 60 seconds: `angle_deg = timestamp_s Ã— 6` for ideal constant-speed motion. Twelve positions are five seconds / 30Â° apart. There is no duplicate 360Â° frame. Real captures should store measured or timestamp-derived angles per image, including offsets if cameras fire sequentially. A motor encoder and calibrated intrinsics/extrinsics are future upgrades.
 
 Detailed reconstruction gets individual camera images (split crops for combined captures), but moving-object/static-background scenes need masks and real camera calibration. The synthetic images have little texture and are meant for flow testing, not COLMAP feature matching.
 
@@ -336,3 +336,22 @@ python -m windows_client --grid 32 process scans/received/scan_20260912_173957_8
 ```
 
 Add `--dry-run` to the splitter command to validate without saving changes. Split images are in `raw/`; originals remain unchanged in `raw_combined/`. Open `outputs/inspection/combined_contact_sheet.jpg` and `outputs/inspection/split_contact_sheet.jpg`, or use their links under **View source photos** in the viewer. Change `camera_order` to change quadrant-to-camera assignment; edit normalized `crops` for different boundaries. See [quad split workflow](docs/quad_split_workflow.md) for configuration, recovery, orientation and limitations.
+
+## Full Photogrammetry Mode
+
+Full mode preserves high-resolution captures, splits combined quad frames, generates foreground masks and sharpness diagnostics, stages a COLMAP workspace and RealityCapture/RealityScan image layers, and writes a complete report. The quick visual-hull flow remains available separately.
+
+Update the Pi code and restart its API before using full mode. Capture backgrounds with the object removed; the full client checks matching settings and prompts for empty-table capture/replacing the object if needed. Use 3840x2160 combined or higher: 1920x1080 combined leaves only 960x540 per camera. Actual sizes are reported, never assumed.
+
+```powershell
+python -m windows_client.client --node http://192.168.127.145:8000 --full-scan --no-run-colmap
+python -m windows_client.client --node http://192.168.127.145:8000 --full-scan --run-colmap
+python -m photogrammetry.workspace --scan scans/received/<scan_id>
+python -m photogrammetry.masks --scan scans/received/<scan_id> --threshold 25 --inspect
+```
+
+COLMAP is optional: install a local Windows distribution and add it to PATH, set `COLMAP_PATH`, or use the runner's `--colmap PATH`. Sparse reconstruction is the default; dense is opt-in. Missing COLMAP produces `prepared_only`, not a fabricated mesh. Full mode opens the workspace/report; the quick viewer still works.
+
+Inspect masks and before/after images under `outputs/full_photogrammetry/reports/`, sharpness scores in `sharpness_report.csv`, and mapping under `outputs/inspection/`. Configure order/crops/rotation in `config/quad_split.json`. Import `realitycapture/images/` using its README instructions and mask layers. Fixed-background turntable scenes require effective masking; shiny, transparent and untextured objects may still fail.
+
+See [Full photogrammetry workflow](docs/full_photogrammetry_workflow.md) for background commands, full-scan defaults, installation, output paths, preservation/retries, mask morphology, dense meshing and troubleshooting.

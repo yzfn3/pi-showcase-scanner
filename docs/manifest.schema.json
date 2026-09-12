@@ -369,6 +369,66 @@
         "string",
         "null"
       ]
+    },
+    "full_photogrammetry_mode": {
+      "type": "boolean"
+    },
+    "mask_generation_applied": {
+      "type": "boolean"
+    },
+    "colmap_detected": {
+      "type": "boolean"
+    },
+    "actual_combined_dimensions": {
+      "type": "array"
+    },
+    "actual_split_dimensions": {
+      "type": "array"
+    },
+    "estimated_angles": {
+      "type": "array"
+    },
+    "mask_coverage_stats": {
+      "type": "array"
+    },
+    "colmap_commands": {
+      "type": "array"
+    },
+    "mask_settings": {
+      "type": "object"
+    },
+    "sharpness_stats": {
+      "type": "object"
+    },
+    "colmap_version": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "colmap_status": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "realitycapture_export_path": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "full_workspace_path": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "report_path": {
+      "type": [
+        "string",
+        "null"
+      ]
     }
   },
   "allOf": [

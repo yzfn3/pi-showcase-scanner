@@ -32,6 +32,14 @@ async function select() {
   $('photos-prev').disabled=true;$('photos-next').disabled=true;
   $('photo-summary').textContent='Select a scan to inspect its photos.';
   $('photo-count').textContent=scan?`(${scan.photo_count??scan.frames})`:'';
+  $('full-output').hidden=!scan?.full_workspace;
+  $('full-output').textContent=scan?.full_workspace?`Full photogrammetry: ${scan.full_status}. Workspace: ${scan.full_workspace}`:'';
+  if(scan?.full_workspace?.replaceAll('\\','/').endsWith('/outputs/full_photogrammetry')){
+    const report=document.createElement('a');report.textContent=' Open run report';
+    report.href=`/scans/${encodeURIComponent(scan.id)}/outputs/full_photogrammetry/reports/run_report.md`;
+    report.target='_blank';report.rel='noopener';$('full-output').append(report);
+  }
+
   for(const [id,name] of [['combined-sheet','combined_contact_sheet.jpg'],['split-sheet','split_contact_sheet.jpg']]){
     const path=`outputs/inspection/${name}`;
     $(id).hidden=!scan?.inspection?.includes(path);

@@ -98,7 +98,7 @@ class App:
                 m = load_manifest(scan)
                 report = scan / "outputs" / "result.json"
                 result.append(dict(id=scan.name, source=m.get("source", "imported"), frames=len(processing_frames(m)), photo_count=len(capture_frames(m)), inspection=m.get("contact_sheet_files", []),
-                                   disposable=is_generated(scan),
+                                   disposable=is_generated(scan), full_workspace=m.get("full_workspace_path"), full_status=m.get("colmap_status"),
                                    result=json.loads(report.read_text(encoding="utf-8")) if report.exists() else None,
                                    thumbnail=f"/scans/{scan.name}/{capture_frames(m)[0]['file']}"))
             except (ValueError, OSError, TypeError, KeyError):
@@ -155,7 +155,7 @@ def create_server(root, grid=96, port=8765, max_frames=0):
                     parts = path.split("/")
                     scan = app.scan_path(parts[2])
                     relative = "/".join(parts[3:])
-                    allowed = ("raw/", "raw_combined/", "outputs/inspection/", "outputs/quick/", "outputs/detailed/")
+                    allowed = ("raw/", "raw_combined/", "outputs/inspection/", "outputs/full_photogrammetry/", "outputs/quick/", "outputs/detailed/")
                     if not relative.startswith(allowed):
                         raise ValueError("File is not a displayable scan artifact")
                     base, name = scan, relative
