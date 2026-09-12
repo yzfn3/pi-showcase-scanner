@@ -325,6 +325,23 @@
     },
     "settings": {
       "type": "object"
+    },
+    "camera_timeout_ms": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1,
+      "maximum": 120000
+    },
+    "autofocus_on_capture": {
+      "type": "boolean"
+    },
+    "awbgains": {
+      "type": [
+        "string",
+        "null"
+      ]
     }
   },
   "allOf": [

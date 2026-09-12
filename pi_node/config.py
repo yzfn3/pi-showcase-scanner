@@ -18,7 +18,8 @@ def validate_request(body, backend="mock"):
         raise NodeError("Request must be a JSON object")
     defaults = dict(steps=12, cameras=4, mode=backend, delay_between_steps_ms=0,
                     rotation_seconds=60, output_format="jpg", capture_width=None,
-                    capture_height=None, exposure_time=None, gain=None, awb=None,
+                    capture_height=None, exposure_time=None, gain=None, awb="auto",
+                    camera_timeout_ms=None, autofocus_on_capture=False, awbgains=None,
                     focus_mode=None, lens_position=None, use_backgrounds=True,
                     combined_quad_output=backend == "rpicam", split_combined_output=False)
     allowed = set(defaults) | {"scan_id", "camera_count"}
@@ -46,16 +47,28 @@ def validate_request(body, backend="mock"):
             raise NodeError(f"{key} must be an integer from 64 to 8192")
     if (params["capture_width"] is None) != (params["capture_height"] is None):
         raise NodeError("Set capture_width and capture_height together")
-    for key in ("use_backgrounds", "combined_quad_output", "split_combined_output"):
+    for key in ("use_backgrounds", "combined_quad_output", "split_combined_output", "autofocus_on_capture"):
         if type(params[key]) is not bool:
             raise NodeError(f"{key} must be true or false")
     if params["split_combined_output"]:
         raise NodeError("Quad layout is unverified; splitting is not implemented. Use split_combined_output=false.")
+    timeout = params["camera_timeout_ms"]
+    if timeout is not None and (type(timeout) is not int or not 1 <= timeout <= 120000):
+        raise NodeError("camera_timeout_ms must be an integer from 1 to 120000")
+    gains = params["awbgains"]
+    if gains is not None:
+        try:
+            values = [float(v) for v in gains.split(",")]
+            if len(values) != 2 or any(not math.isfinite(v) or v <= 0 for v in values):
+                raise ValueError()
+        except (AttributeError, ValueError):
+            raise NodeError("awbgains must be two positive finite gains, e.g. 1.0,1.0")
     if params["awb"] not in (None, "auto", "incandescent", "tungsten", "fluorescent", "indoor", "daylight", "cloudy", "custom"):
         raise NodeError("Unsupported awb mode")
     if params["focus_mode"] not in (None, "default", "manual", "auto", "continuous"):
         raise NodeError("Unsupported focus_mode")
-    if params["lens_position"] is not None and params["focus_mode"] not in (None, "manual"):
+    if (params["lens_position"] is not None and params["focus_mode"] not in (None, "manual")
+            and not params["autofocus_on_capture"]):
         raise NodeError("lens_position requires manual focus")
     sid = params.get("scan_id")
     if sid is not None and (not isinstance(sid, str) or len(sid) > 80 or not ID_PATTERN.fullmatch(sid)):

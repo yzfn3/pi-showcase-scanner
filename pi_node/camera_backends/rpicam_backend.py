@@ -78,18 +78,25 @@ class RpicamBackend:
         if path.exists():
             raise NodeError(f"Refusing to overwrite captured image: {path}")
         temporary = path.with_name(path.name + ".part")
+        camera_timeout = settings.get("camera_timeout_ms") or 1000
+        autofocus = settings.get("autofocus_on_capture", False)
+        use_lens = not autofocus or settings.get("focus_mode") == "manual"
         args = ["--nopreview", "--camera", str(camera.get("device_index", 0)),
-                "--timeout", "1000", "--encoding", "jpg", "--output", str(temporary)]
+                "--timeout", str(camera_timeout), "--encoding", "jpg", "--output", str(temporary)]
         flags = {"capture_width": "--width", "capture_height": "--height", "exposure_time": "--shutter",
-                 "gain": "--gain", "awb": "--awb", "focus_mode": "--autofocus-mode", "lens_position": "--lens-position"}
+                 "gain": "--gain", "awb": "--awb", "awbgains": "--awbgains", "focus_mode": "--autofocus-mode", "lens_position": "--lens-position"}
         for key, flag in flags.items():
+            if key == "lens_position" and not use_lens:
+                continue
             if settings.get(key) is not None:
                 args.extend([flag, str(settings[key])])
-        if settings.get("lens_position") is not None and settings.get("focus_mode") is None:
+        if autofocus and settings.get("focus_mode") != "continuous":
+            args.append("--autofocus-on-capture")
+        if use_lens and settings.get("lens_position") is not None and settings.get("focus_mode") is None:
             args.extend(["--autofocus-mode", "manual"])
         started = time.monotonic()
         try:
-            output = self._run(args, self.timeout + (settings.get("exposure_time") or 0)/1e6)
+            output = self._run(args, self.timeout + camera_timeout/1000 + (settings.get("exposure_time") or 0)/1e6)
             if not temporary.is_file() or not temporary.stat().st_size:
                 raise NodeError("Camera command produced no image; inspect permissions and camera logs", 503, "empty_capture")
             with Image.open(temporary) as image:

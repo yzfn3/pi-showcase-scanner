@@ -54,9 +54,18 @@ python -m windows_client.client --node http://raspberrypi.local:8000 --start-sca
 
 Intervals are 5 or 2.5 seconds. The last step begins at 55 or 57.5 seconds; there is no duplicate at 360 degrees. Each command includes a one-second settling period plus launch/exposure/storage time. Four separate commands may exceed 2.5 seconds. Start with 12 steps and reduce if necessary. Quality controls Windows reconstruction only.
 
-Optional supported settings: `--capture-width 1280 --capture-height 720 --exposure-time 10000 --gain 1 --awb daylight --focus-mode manual --lens-position 1`. Exposure is in microseconds and lens position in dioptres. Actual camera support varies. Use identical settings for backgrounds.
+Optional supported settings: `--capture-width 1280 --capture-height 720 --exposure-time 10000 --gain 1 --awb auto --focus-mode manual --lens-position 1`. Exposure is in microseconds and lens position in dioptres. Actual camera support varies. Use identical settings for backgrounds.
 
 ## Expected output
+
+For the verified 1080p autofocus settings, run these separately from Windows, first with the table empty and then with the object placed:
+
+```powershell
+python -m windows_client.client --node http://192.168.127.145:8000 --capture-backgrounds --capture-width 1920 --capture-height 1080 --focus-mode auto --autofocus-on-capture --camera-timeout-ms 5000 --awb auto
+python -m windows_client.client --node http://192.168.127.145:8000 --start-scan --steps 12 --rotation-seconds 60 --capture-width 1920 --capture-height 1080 --focus-mode auto --autofocus-on-capture --camera-timeout-ms 5000 --awb auto --quality fast
+```
+
+Update the code on both machines and restart the Pi node first. The 5-second camera settling timeout plus command overhead may exceed this scan's 5-second interval; the existing scheduler reports a missed-deadline error. Reduce steps if needed while keeping rotation_seconds equal to the measured table period. Advanced locked red/blue gains are available with `--awbgains 1.0,1.0`; recapture backgrounds with matching settings.
 
 - Pi: `pi_node/scans/scan_.../`, containing manifest/status/request files, copied backgrounds, and either `raw/step_000_cam_01.jpg` or `raw_combined/step_000_quad.jpg`.
 - Manifest: capture settings, file hashes, command logs, observed start times, estimated midpoint angles, errors and completion timestamps. These are not hardware exposure timestamps.

@@ -48,7 +48,10 @@ def main(argv=None):
     parser.add_argument("--capture-height", type=int)
     parser.add_argument("--exposure-time", type=float, help="Shutter time in microseconds")
     parser.add_argument("--gain", type=float)
-    parser.add_argument("--awb")
+    parser.add_argument("--awb", default="auto")
+    parser.add_argument("--camera-timeout-ms", type=int, default=None)
+    parser.add_argument("--autofocus-on-capture", action="store_true")
+    parser.add_argument("--awbgains", default=None, help="Advanced red,blue gains, e.g. 1.0,1.0")
     parser.add_argument("--focus-mode")
     parser.add_argument("--lens-position", type=float, help="Focus in dioptres; requires lens support")
     parser.add_argument("--scan-id", help="Existing scan to receive, or an explicit new ID with --start-scan")
@@ -84,9 +87,10 @@ def main(argv=None):
         if (args.start_scan or args.capture_backgrounds) and health.get("ready") is False:
             raise NodeClientError(health.get("last_error") or "Node camera backend is not ready; run diagnostics on the Pi")
         settings = {key: getattr(args, key) for key in (
-            "rotation_seconds", "capture_width", "capture_height", "exposure_time", "gain", "awb", "focus_mode", "lens_position")
+            "rotation_seconds", "capture_width", "capture_height", "exposure_time", "gain", "awb", "focus_mode", "lens_position", "camera_timeout_ms", "awbgains")
             if getattr(args, key) is not None}
-        settings.update(use_backgrounds=args.use_backgrounds, split_combined_output=args.split_combined_output,
+        settings.update(camera_timeout_ms=args.camera_timeout_ms, awbgains=args.awbgains,
+                        autofocus_on_capture=args.autofocus_on_capture, use_backgrounds=args.use_backgrounds, split_combined_output=args.split_combined_output,
                         combined_quad_output=health.get("combined_quad_output", False) if args.combined_quad_output is None else args.combined_quad_output)
         if args.capture_backgrounds:
             LOG.info("Capturing empty-table background references")

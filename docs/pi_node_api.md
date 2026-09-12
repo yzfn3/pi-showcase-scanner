@@ -246,7 +246,7 @@ curl -X POST http://raspberrypi.local:8000/api/v1/scan/start -H 'Content-Type: a
 | capture_width / capture_height | null | Set both or neither; integers 64–8192 |
 | exposure_time | null | Shutter microseconds, 1–10000000 |
 | gain | null | Number 0.1–64 |
-| awb | null | auto, incandescent, tungsten, fluorescent, indoor, daylight, cloudy, custom |
+| awb | auto | auto, incandescent, tungsten, fluorescent, indoor, daylight, cloudy, custom |
 | focus_mode | null | default, manual, auto, continuous |
 | lens_position | null | 0–100 dioptres; manual focus selected automatically if omitted |
 | use_backgrounds | true | Copy matching references when available |
@@ -274,3 +274,12 @@ Combined scans have frames=[] and combined_frames with file/camera_id/step/times
 GET /scans/{id}/files/raw_combined/step_000_quad.jpg returns JPEG bytes with the same headers and checks as raw/. The files list must exactly match all raw/combined/background references. Windows downloads and displays mosaics, prepares detailed staging and reports an unavailable quick model instead of inventing geometry. Physical scans and reference captures are retained; DELETE remains limited to disposable mock generations.
 
 See the [physical demo runbook](physical_demo_runbook.md). Actual hardware operation, quad layout and camera geometry still require verification on this equipment.
+
+
+### Focus and white-balance controls
+
+Both scan/start and backgrounds/capture accept camera_timeout_ms (integer 1–120000, or null for the existing 1000 ms default), autofocus_on_capture (boolean, default false), and awbgains (optional positive finite red,blue gain string such as 1.0,1.0). These are stored at manifest top level, in settings, and in the background compatibility index. Recapture references after changing them.
+
+The camera command uses the selected timeout, adds autofocus-on-capture unless focus_mode is continuous, and omits lens-position when that flag is requested unless focus_mode is manual. Auto mode emits both autofocus-mode auto and autofocus-on-capture. Continuous ignores the capture-focus request but preserves it in recorded settings. AWB defaults to auto; explicit awbgains is an advanced locked-gain option. No balanced or white AWB modes exist in this API.
+
+The subprocess watchdog adds camera timeout to its overhead/exposure allowance, so long settling periods are not killed by the old fixed watchdog. The scan scheduler is unchanged: a 5000 ms camera timeout plus command overhead may overrun a 5000 ms scan interval. Use fewer steps or a longer measured rotation period if the current missed-deadline check fires.

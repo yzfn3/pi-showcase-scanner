@@ -208,7 +208,8 @@ class ScanService:
 
     def _background_settings(self, params):
         keys = ("cameras", "combined_quad_output", "capture_width", "capture_height",
-                "exposure_time", "gain", "awb", "focus_mode", "lens_position")
+                "exposure_time", "gain", "awb", "focus_mode", "lens_position",
+                "camera_timeout_ms", "autofocus_on_capture", "awbgains")
         return {"backend": getattr(self.backend, "name", "mock"), **{k: params[k] for k in keys}}
 
     def _publish_backgrounds(self, folder, manifest, params):
@@ -275,7 +276,8 @@ class ScanService:
                 rotation_period_s=params["rotation_seconds"], rotation_direction="positive_y_right_hand",
                 backend=getattr(self.backend, "name", "mock"), camera_command=getattr(self.backend, "command", None),
                 camera_count=params["cameras"], steps=params["steps"], rotation_seconds=params["rotation_seconds"],
-                capture_interval_seconds=interval, capture_width=params["capture_width"], capture_height=params["capture_height"],
+                camera_timeout_ms=params["camera_timeout_ms"], autofocus_on_capture=params["autofocus_on_capture"],
+                awbgains=params["awbgains"], capture_interval_seconds=interval, capture_width=params["capture_width"], capture_height=params["capture_height"],
                 combined_quad_output=combined, split_combined_output=False, backgrounds_available=False,
                 capture_started_at=None, capture_completed_at=None, cameras=self._camera_set(params),
                 frames=[], combined_frames=[], raw_files=[], raw_combined_files=[], files=[],
