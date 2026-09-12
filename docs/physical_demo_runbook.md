@@ -71,13 +71,13 @@ Update the code on both machines and restart the Pi node first. The 5-second cam
 - Manifest: capture settings, file hashes, command logs, observed start times, estimated midpoint angles, errors and completion timestamps. These are not hardware exposure timestamps.
 - Windows: `scans/received/scan_.../` and `outputs/detailed/` with original images and preparation notes.
 - Separate views: the quick preview runs automatically, producing GLB/OBJ when masks and approximate geometry are usable.
-- Unsplit combined views: source photos and detailed staging are available, with an explicit layout-verification message. No model is invented. Do not treat mosaics as single-camera photogrammetry inputs.
+- Combined views: Windows automatically splits the configured quadrants, preserves mosaics, and runs preview/detailed staging on individual views. Inspect both contact sheets under outputs/inspection; see [quad workflow](quad_split_workflow.md).
 - The client prints an exact local viewer URL and opens it. Keep its terminal running. `--no-browser` prints the URL; `--no-viewer` finishes without a server.
 - Physical/imported scans are retained. Only disposable mock/synthetic scans are automatically removed on next generation or Done. Runtime artifacts are gitignored.
 
 ## What to say during the demo
 
-“The Pi captures views as the object rotates. The laptop verifies and downloads the images, makes a fast silhouette approximation, and prepares the originals for later detailed reconstruction. This preview prioritizes responsiveness, not calibrated measurement. If this kit produces a mosaic, the next hardware step is verifying and splitting those camera views.”
+“The Pi captures views as the object rotates. The laptop verifies and downloads the images, makes a fast silhouette approximation, and prepares the originals for later detailed reconstruction. This preview prioritizes responsiveness, not calibrated measurement. If this kit produces a mosaic, Windows splits it using a configurable layout; we still need to verify camera mapping and calibrate geometry.”
 
 ## Troubleshooting
 
@@ -88,7 +88,7 @@ Update the code on both machines and restart the Pi node first. The 5-second cam
 | Permission issue | Read the command error; check device access for the current account and write access to the scan directory. Avoid broad permission changes or running everything as root. |
 | Output folder empty | Read status/manifest errors, test a single capture, and check free space, permissions and command timeout. Failed captures never publish a completed scan. |
 | Backgrounds missing | Capture the empty table with identical settings/layout. Inspect `backgrounds/current/index.json`. Scanning continues with a warning if references are unavailable. |
-| Combined quad image not split yet | Expected until physical verification. Inspect exact crops, camera mapping and orientation before implementing `pi_node/splitter.py`. The split option currently returns a clear error. |
+| Combined quad image not split yet | Run the Windows splitter described in [quad workflow](quad_split_workflow.md). The Pi-side split flag remains reserved. Inspect crops, mapping and orientation before trusting geometry. |
 | Windows cannot reach Pi | Check hostname/IP, same LAN, node binding on port 8000, firewall and guest-network isolation. Open `http://<Pi-IP>:8000/api/v1/health`. Keep this unauthenticated API off the public internet. |
 | Scan starts but timing is wrong | Measure the table period; adjust rotation_seconds. Inspect scheduled/actual starts in capture_logs. Reduce steps or resolution if commands overrun; separate devices are sequential. Missed deadlines fail without catch-up bursts. |
 | Quick preview fails | Check masks, object centering, shadows/table edges, backgrounds and estimated camera poses. Detailed images are still staged. |

@@ -37,6 +37,19 @@ def capture_frames(manifest):
     return manifest.get("frames", []) + manifest.get("combined_frames", [])
 
 
+def processing_frames(manifest):
+    """Reconstruction uses individual views, never mosaics when split views exist."""
+    return manifest.get("frames") or manifest.get("combined_frames", [])
+
+
+def input_files(manifest):
+    paths = {f["file"] for f in capture_frames(manifest)}
+    paths.update(c["background"] for c in manifest["cameras"] if c.get("background"))
+    if manifest.get("combined_background"):
+        paths.add(manifest["combined_background"])
+    return paths
+
+
 def load_manifest(scan):
     scan = Path(scan).resolve()
     m = json.loads((scan / "manifest.json").read_text(encoding="utf-8"))
@@ -86,11 +99,14 @@ def validate_manifest(scan, m):
     combined = m.get("combined_frames", [])
     if not isinstance(raw, list) or not isinstance(combined, list):
         raise ValueError("Frame collections must be lists")
-    if combined and (not m.get("combined_quad_output") or m.get("split_combined_output") or raw):
-        raise ValueError("Unsplit combined scans must declare combined_quad_output and contain no individual frames")
+    if combined and (not m.get("combined_quad_output") or (raw and not m.get("quad_split_applied")) or (m.get("split_combined_output") and not m.get("quad_split_applied"))):
+        raise ValueError("Mixed raw/combined scans must declare quad_split_applied")
     frames = capture_frames(m)
     if not isinstance(frames, list) or not 1 <= len(frames) <= 10000:
         raise ValueError("Expected 1-10000 frames")
+    if m.get("combined_background"):
+        safe_file(scan, m["combined_background"], "backgrounds")
+    combined_names = {f["file"] for f in combined}
     paths = set()
     for f in frames:
         if not isinstance(f, dict):
@@ -99,7 +115,7 @@ def validate_manifest(scan, m):
             raise ValueError("Frame refers to an undefined camera")
         number(f.get("angle_deg"), "angle_deg", -360000, 360000)
         number(f.get("timestamp_s"), "timestamp_s", 0, 86400)
-        path = safe_file(scan, f.get("file"), "raw_combined" if combined else "raw")
+        path = safe_file(scan, f.get("file"), "raw_combined" if f.get("file") in combined_names else "raw")
         if path in paths:
             raise ValueError("Duplicate frame file")
         paths.add(path)
@@ -110,10 +126,8 @@ def validate_manifest(scan, m):
 
 
 def fingerprint(scan, manifest, grid, max_frames=0):
-    h = hashlib.sha256(json.dumps([manifest, grid, max_frames, "preview-v6-capture"], sort_keys=True).encode())
-    paths = {f["file"] for f in capture_frames(manifest)}
-    paths.update(c["background"] for c in manifest["cameras"] if c.get("background"))
-    for name in sorted(paths):
+    h = hashlib.sha256(json.dumps([manifest, grid, max_frames, "preview-v7-quad"], sort_keys=True).encode())
+    for name in sorted(input_files(manifest)):
         h.update(name.encode())
         h.update((Path(scan) / name).read_bytes())
     return h.hexdigest()

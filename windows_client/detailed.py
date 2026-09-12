@@ -1,24 +1,24 @@
 """Prepare a clean image workspace; never launch reconstruction software."""
 import shutil
 from pathlib import Path
-from windows_client.scan import write_json, capture_frames
+from windows_client.scan import write_json, processing_frames
 
 
 def prepare(scan, manifest):
     out = scan / "outputs" / "detailed"
     images = out / "images"
     images.mkdir(parents=True, exist_ok=True)
-    expected = {Path(f["file"]).name for f in capture_frames(manifest)}
-    if len(expected) != len(capture_frames(manifest)):
+    expected = {Path(f["file"]).name for f in processing_frames(manifest)}
+    if len(expected) != len(processing_frames(manifest)):
         raise ValueError("Detailed export requires unique image basenames")
     # Remove only stale generated image files, never raw capture data.
     for old in images.iterdir():
         if old.is_file() and old.name not in expected:
             old.unlink()
-    for frame in capture_frames(manifest):
+    for frame in processing_frames(manifest):
         shutil.copy2(scan / frame["file"], images / Path(frame["file"]).name)
     write_json(out / "capture_manifest.json", manifest)
-    combined = bool(manifest.get("combined_frames"))
+    combined = bool(manifest.get("combined_frames")) and not manifest.get("quad_split_applied", False)
     write_json(out / "job.json", dict(status="prepared_only", engine=None,
                image_count=len(expected), images="images", reconstruction_started=False, requires_split=combined,
                note="Approximate orthographic preview poses are not calibrated photogrammetry cameras."))

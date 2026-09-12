@@ -5,7 +5,7 @@ from pathlib import Path
 from PIL import Image
 
 from preview3d.selection import select_frames
-from windows_client.scan import load_manifest, safe_file, capture_frames
+from windows_client.scan import load_manifest, safe_file, capture_frames, processing_frames
 
 
 def photo_catalog(scan, kind="all", offset=0, limit=48):
@@ -33,7 +33,7 @@ def photo_catalog(scan, kind="all", offset=0, limit=48):
     elif kind == "backgrounds":
         items = backgrounds
     return dict(items=items[offset:offset+limit], total=len(items), offset=offset, limit=limit,
-                frames_total=len(capture_frames(manifest)), frames_used=None if selected is None else len(selected),
+                frames_total=len(processing_frames(manifest)), frames_used=None if selected is None else len(selected),
                 backgrounds_total=len(backgrounds), selection_inferred=inferred)
 
 

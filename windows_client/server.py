@@ -10,7 +10,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse, parse_qs
 
 from sample_data.generate import generate
-from windows_client.scan import load_manifest, capture_frames
+from windows_client.scan import load_manifest, capture_frames, processing_frames
 from windows_client.workflow import import_scan, process_scan
 from windows_client.cleanup import is_generated, finish_demo
 from windows_client.photos import photo_catalog, thumbnail
@@ -97,7 +97,7 @@ class App:
             try:
                 m = load_manifest(scan)
                 report = scan / "outputs" / "result.json"
-                result.append(dict(id=scan.name, source=m.get("source", "imported"), frames=len(capture_frames(m)),
+                result.append(dict(id=scan.name, source=m.get("source", "imported"), frames=len(processing_frames(m)), photo_count=len(capture_frames(m)), inspection=m.get("contact_sheet_files", []),
                                    disposable=is_generated(scan),
                                    result=json.loads(report.read_text(encoding="utf-8")) if report.exists() else None,
                                    thumbnail=f"/scans/{scan.name}/{capture_frames(m)[0]['file']}"))
@@ -155,7 +155,7 @@ def create_server(root, grid=96, port=8765, max_frames=0):
                     parts = path.split("/")
                     scan = app.scan_path(parts[2])
                     relative = "/".join(parts[3:])
-                    allowed = ("raw/", "raw_combined/", "outputs/quick/", "outputs/detailed/")
+                    allowed = ("raw/", "raw_combined/", "outputs/inspection/", "outputs/quick/", "outputs/detailed/")
                     if not relative.startswith(allowed):
                         raise ValueError("File is not a displayable scan artifact")
                     base, name = scan, relative

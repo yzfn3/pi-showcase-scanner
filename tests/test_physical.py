@@ -113,7 +113,7 @@ class PhysicalTests(unittest.TestCase):
             self.assertTrue(m['backgrounds_available'])
             self.assertEqual(len(m['raw_combined_files']), 3)
             self.assertEqual(m['frames'], [])
-            result = process_scan(scan)
+            result = process_scan(scan, auto_split=False)
             self.assertEqual(result['quick']['status'], 'unavailable')
             self.assertTrue(result['detailed']['requires_split'])
             self.assertEqual(result['detailed']['image_count'], 3)
@@ -125,7 +125,7 @@ class PhysicalTests(unittest.TestCase):
             bad = json.loads(json.dumps(m)); bad['files'][0]['file'] = 'raw_combined/../../escape.jpg'
             with self.assertRaises(NodeClientError):
                 transfer_records(bad, sid)
-            # Exercise the public CLI receive/stage path; no model should be invented.
+            # The opt-out above preserves inspection-only behavior; CLI now auto-splits.
             with patch('logging.basicConfig'), patch('logging.FileHandler', return_value=logging.NullHandler()), redirect_stdout(io.StringIO()):
                 self.assertEqual(client_main(['--node', client.node, '--scan-id', sid, '--root', str(scan.parent), '--no-viewer']), 0)
 

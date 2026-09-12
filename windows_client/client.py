@@ -40,6 +40,7 @@ def main(argv=None):
     parser.add_argument("--start-scan", action="store_true")
     parser.add_argument("--capture-backgrounds", action="store_true", help="Capture the empty table, then exit unless --start-scan is also supplied")
     parser.add_argument("--rotation-seconds", type=float, help="Physical rotation period (default 60); explicitly setting this also times mock scans")
+    parser.add_argument("--quad-split-config", type=Path, help="Local quad crop/order configuration")
     parser.add_argument("--quality", choices=("fast", "detailed", "fine"), default="detailed")
     parser.add_argument("--combined-quad-output", action=argparse.BooleanOptionalAction, default=None)
     parser.add_argument("--split-combined-output", action="store_true", help="Reserved: rejected until the physical layout is verified")
@@ -110,7 +111,7 @@ def main(argv=None):
         scan = client.download_scan(sid, args.root, timeout=args.transfer_timeout)
         client.close()
         client = None
-        result = process_scan(scan, grid=args.grid, max_frames=args.max_frames)
+        result = process_scan(scan, grid=args.grid, max_frames=args.max_frames, quad_config=args.quad_split_config)
         for previous in scan.parent.glob("scan_*"):
             if previous != scan and is_generated(previous):
                 try:

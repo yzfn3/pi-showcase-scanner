@@ -137,7 +137,7 @@ The intervals are 5 and 2.5 seconds. The first command starts at time zero; the 
 
 Additional options: `--capture-width 1280 --capture-height 720`, `--exposure-time 10000` (microseconds), `--gain 1`, `--awb auto`, `--focus-mode manual --lens-position 1` (dioptres), `--no-use-backgrounds`, `--cameras 4`. Hardware must support each control. Capture backgrounds with the same resolution, layout, exposure and focus settings as the scan. Missing or incompatible references do not block scanning; the manifest records `backgrounds_available=false`. Current references live in `pi_node/backgrounds/current/` and are copied into each scan. They are reusable; physical scans are retained rather than automatically deleted.
 
-The client detects the backend through health, starts/polls/downloads with the existing timeout and checksum protections, prepares detailed images and opens its local viewer. **Separate views** automatically attempt quick reconstruction using approximate camera geometry. **Unsplit combined frames** appear in the photo gallery and detailed staging, with a clear “layout needs verification” message; no GLB/OBJ is invented. `--split-combined-output` is reserved and rejected until we physically verify crops/orientations and implement `pi_node/splitter.py`.
+The client detects the backend through health, starts/polls/downloads with timeout and checksum protections, then automatically splits combined-only captures using `config/quad_split.json`. It preserves the original mosaics, reconstructs from individual camera images, prepares detailed images and opens its local viewer. Inspect the contact sheets to verify camera order, crops and orientation. The Pi-side `--split-combined-output` flag remains reserved; splitting now happens on Windows.
 
 For a timed hardware-free rehearsal, run the node with `--backend mock` (or `--mock`) and explicitly pass `--rotation-seconds`; omit that option for the original fast simulated workflow. `--combined-quad-output` on mock mode creates a synthetic mosaic to test transport/staging, not to establish the real kit's layout.
 
@@ -287,7 +287,7 @@ This is a **visual hull**, not feature-based photogrammetry. It cannot recover h
 
 The nominal table speed is one revolution per 60 seconds: `angle_deg = timestamp_s × 6` for ideal constant-speed motion. Twelve positions are five seconds / 30° apart. There is no duplicate 360° frame. Real captures should store measured or timestamp-derived angles per image, including offsets if cameras fire sequentially. A motor encoder and calibrated intrinsics/extrinsics are future upgrades.
 
-Detailed reconstruction gets all original images, but moving-object/static-background scenes need masks and real camera calibration. The synthetic images have little texture and are meant for flow testing, not COLMAP feature matching.
+Detailed reconstruction gets individual camera images (split crops for combined captures), but moving-object/static-background scenes need masks and real camera calibration. The synthetic images have little texture and are meant for flow testing, not COLMAP feature matching.
 
 The node uses `MockCapture` or `RpicamBackend` in `pi_node/camera_backends/`; `capture.py` and `service.py` remain compatibility imports. Real subprocess capture is implemented, but Arducam routing/layout, hardware synchronization, motor control, and calibration are not verified or implemented. Mock images include a labeled footer excluded from silhouette carving by `preview_crop`. A future detailed engine should crop that footer too; this step stages original images. Transfers are sequential, with whole-file retries, a 50 MiB per-image limit and a 2 GiB per-scan limit. The HTTP acceptance flow is tested on Windows localhost; physical Pi hardware and LAN operation still need testing on your equipment. Pi connection/capture is currently CLI-driven; the existing web UI displays the received library when started with `--root scans/received`.
 
@@ -319,3 +319,20 @@ git commit -m "Build local Pi scanner MVP"
 If it already belongs to a repository, use that repository's normal add/commit workflow. Create an empty GitHub repository, add its URL as your remote, and push your branch. No remote is created and nothing is published automatically. Review `git status --short` before committing.
 
 The included `.github/workflows/checks.yml` runs the integration tests when `pi-showcase-scanner` is the GitHub repository root. If keeping it inside a parent repository, move that workflow to the parent's `.github/workflows/` (it detects either layout).
+
+## Combined Arducam frames
+
+Windows automatically converts each downloaded 2x2 JPEG into four camera images before preview and detailed staging. The defaults map top-left, top-right, bottom-left, bottom-right to cam_01 through cam_04. These are configurable assumptions, not camera calibration.
+
+```powershell
+python -m windows_client.client --node http://192.168.127.145:8000 --start-scan --steps 8 --rotation-seconds 60 --capture-width 1920 --capture-height 1080 --focus-mode auto --autofocus-on-capture --camera-timeout-ms 1000 --awb auto --quality fast
+```
+
+For an already downloaded scan, edit `config/quad_split.json` if necessary and run:
+
+```powershell
+python -m preview3d.quad_splitter --scan scans/received/scan_20260912_173957_874840f4 --config config/quad_split.json --contact-sheet
+python -m windows_client --grid 32 process scans/received/scan_20260912_173957_874840f4
+```
+
+Add `--dry-run` to the splitter command to validate without saving changes. Split images are in `raw/`; originals remain unchanged in `raw_combined/`. Open `outputs/inspection/combined_contact_sheet.jpg` and `outputs/inspection/split_contact_sheet.jpg`, or use their links under **View source photos** in the viewer. Change `camera_order` to change quadrant-to-camera assignment; edit normalized `crops` for different boundaries. See [quad split workflow](docs/quad_split_workflow.md) for configuration, recovery, orientation and limitations.

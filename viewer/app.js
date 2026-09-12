@@ -31,7 +31,12 @@ async function select() {
   photoVersion++;photoOffset=0;$('photo-grid').replaceChildren();$('photo-page').textContent='';
   $('photos-prev').disabled=true;$('photos-next').disabled=true;
   $('photo-summary').textContent='Select a scan to inspect its photos.';
-  $('photo-count').textContent=scan?`(${scan.frames})`:'';
+  $('photo-count').textContent=scan?`(${scan.photo_count??scan.frames})`:'';
+  for(const [id,name] of [['combined-sheet','combined_contact_sheet.jpg'],['split-sheet','split_contact_sheet.jpg']]){
+    const path=`outputs/inspection/${name}`;
+    $(id).hidden=!scan?.inspection?.includes(path);
+    if(scan)$(id).href=`/scans/${encodeURIComponent(scan.id)}/${path}`;
+  }
   if($('photo-dialog').open)$('photo-dialog').close();
   if(scan){
     const upgraded=result?.quick.surface_version===2;

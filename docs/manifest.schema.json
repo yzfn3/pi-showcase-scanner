@@ -342,6 +342,33 @@
         "string",
         "null"
       ]
+    },
+    "quad_split_applied": {
+      "type": "boolean"
+    },
+    "quad_split_mode": {
+      "const": "quadrants"
+    },
+    "quad_split_config": {
+      "type": "object"
+    },
+    "split_files": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "contact_sheet_files": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "combined_background": {
+      "type": [
+        "string",
+        "null"
+      ]
     }
   },
   "allOf": [

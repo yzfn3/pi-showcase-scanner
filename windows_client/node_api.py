@@ -220,14 +220,30 @@ class NodeClient:
             raise NodeClientError(f"Transfer already active. After a crash, stop the old client and remove {lock}") from exc
         os.close(descriptor)
         try:
+            if (folder / ".processing").exists():
+                raise NodeClientError("Scan is processing or splitting; retry after it finishes")
             receipt_path = folder / "transfer.json"
             if new:
                 write_json(receipt_path, receipt)
             elif not receipt_path.is_file() or json.loads(receipt_path.read_text(encoding="utf-8")) != receipt:
                 raise NodeClientError("A different scan already occupies this local ID; use a different --root. Nothing overwritten.")
             manifest_path = folder / "manifest.json"
-            if manifest_path.exists() and json.loads(manifest_path.read_text(encoding="utf-8")) != manifest:
-                raise NodeClientError("Local manifest was modified; refusing to overwrite it")
+            if manifest_path.exists():
+                local = json.loads(manifest_path.read_text(encoding="utf-8"))
+                if local != manifest:
+                    # Splitting creates a local derived manifest. Its immutable source
+                    # and content-checksum receipt must still match before resuming.
+                    from preview3d.quad_splitter import json_digest
+                    source_path = folder / "manifest.source.json"
+                    split_receipt = folder / "quad_split_receipt.json"
+                    valid_split = False
+                    if local.get("quad_split_applied") and source_path.is_file() and split_receipt.is_file():
+                        source = json.loads(source_path.read_text(encoding="utf-8"))
+                        derived = json.loads(split_receipt.read_text(encoding="utf-8"))
+                        valid_split = (source == manifest and derived.get("source_hash") == json_digest(source)
+                                       and derived.get("manifest_hash") == json_digest(local))
+                    if not valid_split:
+                        raise NodeClientError("Local manifest was modified; refusing to overwrite it")
             for index, record in enumerate(records.values(), 1):
                 self._download(scan_id, folder, record, deadline)
                 if index % 4 == 0 or index == len(records):
