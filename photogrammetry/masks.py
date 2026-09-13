@@ -22,12 +22,13 @@ def foreground(image, background, threshold=25, blur=1, opening=3, closing=5):
     return mask
 
 
-def generate(scan, workspace, threshold=25, blur=1, opening=3, closing=5, inspect=False):
+def generate(scan, workspace, threshold=25, blur=1, opening=3, closing=5, inspect=False, progress=None):
     manifest=load_manifest(scan); cameras={c['id']:c for c in manifest['cameras']}
     settings=dict(threshold=threshold,blur=blur,opening=opening,closing=closing)
     (workspace/'masks').mkdir(parents=True,exist_ok=True)
     rows, warnings, coverage = [], [], []
-    for frame in manifest['frames']:
+    for index,frame in enumerate(manifest['frames'],1):
+        if progress:progress(dict(stage='Generating foreground masks',done=index-1,total=len(manifest['frames'])))
         name=Path(frame['file']).name; camera=cameras[frame['camera_id']]
         reference=camera.get('background')
         if not reference:

@@ -1,0 +1,2 @@
+# Optional GLB import/export for the portable TRELLIS.2 runtime.
+trimesh==4.7.4

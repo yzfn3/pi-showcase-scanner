@@ -1,5 +1,6 @@
 """Validated capture parameters shared by the API, manager and camera CLI."""
 import math
+import re
 from windows_client.scan import ID_PATTERN
 
 
@@ -20,6 +21,8 @@ def validate_request(body, backend="mock"):
                     rotation_seconds=60, output_format="jpg", capture_width=None,
                     capture_height=None, exposure_time=None, gain=None, awb="auto",
                     camera_timeout_ms=None, autofocus_on_capture=False, awbgains=None,
+                    sensor_mode=None, viewfinder_mode=None, viewfinder_width=None, viewfinder_height=None,
+                    zsl=False, autofocus_window=None, autofocus_range=None, jpeg_quality=None,
                     focus_mode=None, lens_position=None, use_backgrounds=True,
                     combined_quad_output=backend == "rpicam", split_combined_output=False)
     allowed = set(defaults) | {"scan_id", "camera_count"}
@@ -42,12 +45,29 @@ def validate_request(body, backend="mock"):
             raise NodeError(f"{key} must be a number from {low} to {high}")
     if params["rotation_seconds"] is None:
         raise NodeError("rotation_seconds is required")
-    for key in ("capture_width", "capture_height"):
+    for key in ("capture_width", "capture_height", "viewfinder_width", "viewfinder_height"):
         if params[key] is not None and (type(params[key]) is not int or not 64 <= params[key] <= 8192):
             raise NodeError(f"{key} must be an integer from 64 to 8192")
     if (params["capture_width"] is None) != (params["capture_height"] is None):
         raise NodeError("Set capture_width and capture_height together")
-    for key in ("use_backgrounds", "combined_quad_output", "split_combined_output", "autofocus_on_capture"):
+    if (params['viewfinder_width'] is None) != (params['viewfinder_height'] is None):
+        raise NodeError('Set viewfinder_width and viewfinder_height together')
+    for key in ('sensor_mode', 'viewfinder_mode'):
+        value = params[key]
+        if value is not None and (not isinstance(value, str) or not re.fullmatch(r'[1-9]\d{1,4}:[1-9]\d{1,4}(?::(?:8|10|12|14|16)(?::[PU])?)?', value)):
+            raise NodeError(f'{key} must be WIDTH:HEIGHT[:BITS[:P|U]]')
+    if params['autofocus_range'] not in (None, 'normal', 'macro', 'full'):
+        raise NodeError('autofocus_range must be normal, macro or full')
+    if params['jpeg_quality'] is not None and (type(params['jpeg_quality']) is not int or not 1 <= params['jpeg_quality'] <= 100):
+        raise NodeError('jpeg_quality must be 1..100')
+    if params['autofocus_window'] is not None:
+        try:
+            x,y,w,h = map(float, params['autofocus_window'].split(','))
+            if not all(math.isfinite(v) for v in (x,y,w,h)) or min(x,y)<0 or min(w,h)<=0 or x+w>1 or y+h>1:
+                raise ValueError()
+        except (ValueError, AttributeError):
+            raise NodeError('autofocus_window must be normalized x,y,w,h within the sensor')
+    for key in ("use_backgrounds", "combined_quad_output", "split_combined_output", "autofocus_on_capture", "zsl"):
         if type(params[key]) is not bool:
             raise NodeError(f"{key} must be true or false")
     if params["split_combined_output"]:

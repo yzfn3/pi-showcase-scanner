@@ -4,12 +4,12 @@ import shutil
 from pathlib import Path
 
 
-def export(scan, manifest, workspace):
+def export(scan, manifest, workspace, progress=None):
     root = workspace / 'realitycapture'
     images = root / 'images'
     images.mkdir(parents=True, exist_ok=True)
     rows = []
-    for frame in manifest['frames']:
+    for index,frame in enumerate(manifest['frames'],1):
         name = Path(frame['file']).name
         shutil.copy2(workspace / 'images' / name, images / name)
         mask = workspace / 'masks' / (name + '.png')
@@ -19,6 +19,7 @@ def export(scan, manifest, workspace):
         rows.append(dict(filename=name, step=frame['step'], camera=frame['camera_id'],
                          estimated_turntable_angle_degrees=frame.get('angle_deg'),
                          original_file=str(scan / frame['file']), mask_file=str(target) if mask.exists() else ''))
+        if progress:progress(dict(stage='Preparing RealityScan image export',done=index,total=len(manifest['frames'])))
     with (root / 'image_index.csv').open('w', newline='', encoding='utf-8') as out:
         writer = csv.DictWriter(out, fieldnames=list(rows[0]))
         writer.writeheader()

@@ -39,7 +39,13 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--node", required=True, help="http://raspberrypi.local:8000 or http://127.0.0.1:8000")
     parser.add_argument("--start-scan", action="store_true")
-    parser.add_argument("--full-scan", action="store_true")
+    parser.add_argument("--full-scan", action="store_true", help="Run VGGT reconstruction")
+    parser.add_argument("--reconstruction-engine", choices=["vggt","worldmirror2"], default="vggt")
+    parser.add_argument("--brightness-gamma", type=float, default=1.0)
+    parser.add_argument("--vggt-frames", type=int, default=64)
+    parser.add_argument("--vggt-size", type=int, default=392)
+    parser.add_argument("--capture-profile", choices=("quad-sharp", "standard"),
+                        help="quad-sharp: tested 4:3 sensor mode and targeted focus; default for full scans")
     parser.add_argument("--capture-backgrounds-first", action="store_true")
     parser.add_argument("--skip-backgrounds", action="store_true")
     colmap_group = parser.add_mutually_exclusive_group()
@@ -66,6 +72,14 @@ def main(argv=None):
     parser.add_argument("--gain", type=float)
     parser.add_argument("--awb", default="auto")
     parser.add_argument("--camera-timeout-ms", type=int, default=None)
+    parser.add_argument("--sensor-mode", help="rpicam sensor mode WIDTH:HEIGHT:BITS")
+    parser.add_argument("--viewfinder-mode", help="Use the same sensor mode while focusing")
+    parser.add_argument("--viewfinder-width", type=int)
+    parser.add_argument("--viewfinder-height", type=int)
+    parser.add_argument("--zsl", action="store_true", help="Keep still and preview streams configured together")
+    parser.add_argument("--autofocus-window", help="Normalized x,y,w,h focus region")
+    parser.add_argument("--autofocus-range", choices=("normal", "macro", "full"))
+    parser.add_argument("--jpeg-quality", type=int)
     parser.add_argument("--autofocus-on-capture", action="store_true")
     parser.add_argument("--awbgains", default=None, help="Advanced red,blue gains, e.g. 1.0,1.0")
     parser.add_argument("--focus-mode")
@@ -86,12 +100,24 @@ def main(argv=None):
     parser.add_argument("--no-browser", action="store_true", help="Serve the viewer and print its URL without opening a browser")
     parser.add_argument("--no-viewer", action="store_true", help="Finish after processing; print artifact paths and the reopen command")
     args = parser.parse_args(argv)
+    if args.full_scan and args.capture_profile is None:
+        args.capture_profile = "quad-sharp"
+    if args.capture_profile == "quad-sharp":
+        # Verified on this quad kit. Explicit CLI values remain authoritative.
+        profile = dict(steps=8, capture_width=4624, capture_height=3472, sensor_mode="4624:3472:10",
+                       viewfinder_mode="4624:3472:10", camera_timeout_ms=6000, focus_mode="continuous",
+                       autofocus_window="0.6,0.15,0.3,0.2", autofocus_range="full", jpeg_quality=95,
+                       combined_quad_output=True)
+        for key, value in profile.items():
+            if getattr(args, key) is None: setattr(args, key, value)
+        args.zsl = True
     if args.full_scan:
         args.start_scan = True
         for key, value in dict(steps=24, rotation_seconds=60, capture_width=3840, capture_height=2160,
                                focus_mode="auto", camera_timeout_ms=1000, quality="full", combined_quad_output=True).items():
             if getattr(args, key) is None: setattr(args, key, value)
-        args.autofocus_on_capture = True
+        if args.focus_mode == 'auto':
+            args.autofocus_on_capture = True
         args.preserve_originals = True
         args.split_combined_output = False  # Windows splits locally; the Pi flag is reserved.
     args.steps = args.steps or 12
@@ -119,11 +145,14 @@ def main(argv=None):
         if (args.start_scan or args.capture_backgrounds) and health.get("ready") is False:
             raise NodeClientError(health.get("last_error") or "Node camera backend is not ready; run diagnostics on the Pi")
         settings = {key: getattr(args, key) for key in (
-            "rotation_seconds", "capture_width", "capture_height", "exposure_time", "gain", "awb", "focus_mode", "lens_position", "camera_timeout_ms", "awbgains")
+            "rotation_seconds", "capture_width", "capture_height", "exposure_time", "gain", "awb", "focus_mode", "lens_position", "camera_timeout_ms", "awbgains",
+            "sensor_mode", "viewfinder_mode", "viewfinder_width", "viewfinder_height", "autofocus_window", "autofocus_range", "jpeg_quality")
             if getattr(args, key) is not None}
         settings.update(camera_timeout_ms=args.camera_timeout_ms, awbgains=args.awbgains,
                         autofocus_on_capture=args.autofocus_on_capture, use_backgrounds=args.use_backgrounds, split_combined_output=args.split_combined_output,
                         combined_quad_output=health.get("combined_quad_output", False) if args.combined_quad_output is None else args.combined_quad_output)
+        if args.zsl:
+            settings['zsl'] = True
         background_needed = args.capture_backgrounds or args.capture_backgrounds_first
         if args.full_scan and args.use_backgrounds and not background_needed:
             availability = client.json("POST", "/backgrounds/check", body=dict(mode=mode, cameras=args.cameras, **settings))
@@ -144,6 +173,11 @@ def main(argv=None):
             if not args.start_scan and not args.scan_id:
                 return 0
         if args.start_scan:
+            capture_budget = (args.camera_timeout_ms or 1000)/1000 + 0.75
+            if args.capture_profile == 'quad-sharp' and args.focus_mode == 'manual':
+                capture_budget = max(capture_budget, 3.0)
+            if mode == "rpicam" and (args.rotation_seconds or 60)/args.steps < capture_budget:
+                raise ValueError("Capture startup/settling cannot reliably fit the step interval. Use --steps 16 for the tested locked-focus setup, --steps 8 for six-second autofocus, or slow the physical table and set its actual rotation period.")
             sid = sid or "scan_" + datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S") + "_" + uuid.uuid4().hex[:8]
             LOG.info("Starting scan %s", sid)
             started = client.start(scan_id=sid, steps=args.steps, cameras=args.cameras,
@@ -155,15 +189,15 @@ def main(argv=None):
         client.close()
         client = None
         if args.full_scan:
-            from photogrammetry.workspace import prepare
-            result = prepare(scan, root=args.full_workspace_root, threshold=args.mask_threshold, inspect=True,
-                             run_colmap=args.run_colmap, dense=args.dense, matcher=args.matcher, quad_config=args.quad_split_config)
-            print("FULL WORKSPACE: " + result["full_workspace_path"], flush=True)
-            print("REPORT: " + result["report_path"], flush=True)
-            print("STATUS: " + result["colmap_status"], flush=True)
+            from photogrammetry.vggt_runner import run
+            result = run(scan, engine=args.reconstruction_engine, gamma=args.brightness_gamma, max_frames=args.vggt_frames,
+                         image_size=args.vggt_size, threshold=args.mask_threshold, mesh=True,
+                         progress=lambda event: LOG.info("%s", event))
+            print("RECONSTRUCTION WORKSPACE: " + result["full_workspace_path"], flush=True)
+            print("STATUS: " + result["status"], flush=True)
             print(result["next_action"], flush=True)
-            if not args.no_browser and not args.no_viewer and hasattr(os, "startfile"):
-                os.startfile(result["full_workspace_path"])
+            if not args.no_viewer:
+                show_result(scan,open_browser=not args.no_browser)
             return 1 if result["errors"] else 0
         result = process_scan(scan, grid=args.grid, max_frames=args.max_frames, quad_config=args.quad_split_config)
         for previous in scan.parent.glob("scan_*"):

@@ -1,5 +1,14 @@
 # Full photogrammetry workflow
 
+## Verified sharp-capture profile (September 12, 2026)
+
+The current full-scan default is `quad-sharp`: 4624x3472 output and sensor mode, matching viewfinder mode, ZSL, JPEG quality 95, continuous autofocus over normalized window `0.6,0.15,0.3,0.2`, full focus range, and 6000ms settling. This window targets the object in the top-right quadrant on this rig. Eight captures on the real Pi completed with AfState=2 and readable bottle detail; each split is 2312x1736. The default is eight steps per 60 seconds because startup/focus takes about 6.6 seconds. `--capture-profile standard` restores the earlier defaults. Explicit settings override profile defaults.
+
+Use the same profile for backgrounds: `python -m windows_client.client --node http://192.168.127.145:8000 --capture-backgrounds --capture-profile quad-sharp`. After finding focus on the object, locking the measured lens position for both backgrounds and scans avoids background refocusing. A fixed value is specific to this setup; recheck it if cameras/object distance change. Logs now include AfState, LensPosition, ExposureTime and ScalerCrop metadata.
+
+The old 16:9 path changed from a 4624x3472 focusing mode to 3840x2160 at capture. The profile keeps the full 4:3 framing and avoids that switch. Close rpicam-hello before app capture. Do not increase digital sharpening to disguise defocus.
+
+
 ## Physical setup checklist
 
 - Update this repository on both Windows and the Pi, install requirements, and restart the Pi API. The new POST `/api/v1/backgrounds/check` endpoint validates matching references before full capture.
@@ -35,7 +44,7 @@ python -m windows_client.client --node http://192.168.127.145:8000 --full-scan -
 python -m windows_client.client --node http://192.168.127.145:8000 --full-scan --steps 36 --rotation-seconds 90 --capture-width 4624 --capture-height 3472 --camera-timeout-ms 1500
 ```
 
-`--full-scan` alone supplies 24 steps, 60 seconds, combined 3840x2160, autofocus auto/on-capture, 1000ms and AWB auto. It preserves originals and attempts sparse COLMAP only when available. Quad splitting is on Windows; the reserved Pi split flag remains false on the wire. Existing `--start-scan --quality fast` continues to use the quick viewer. Full mode opens its output folder; `--no-viewer` or `--no-browser` prints paths without opening it. `--full-workspace-root PATH` places each scan's workspace under PATH/scan_id.
+`--full-scan` now selects the verified quad-sharp defaults above. The explicit 24-step/1000ms examples below are legacy settings and require deliberate focus/timing choices; use the new profile for initial focus checks. It preserves originals and attempts sparse COLMAP only when available. Quad splitting is on Windows; the reserved Pi split flag remains false on the wire. Existing `--start-scan --quality fast` continues to use the quick viewer. Full mode opens its output folder; `--no-viewer` or `--no-browser` prints paths without opening it. `--full-workspace-root PATH` places each scan's workspace under PATH/scan_id.
 
 For downloaded scans (replace `<scan_id>`):
 
@@ -105,3 +114,25 @@ Open `realitycapture/README_IMPORT.txt`. Import the images folder, including nam
 | Dense takes too long | Start with sparse; reduce dense settings externally, check CUDA support, or omit --dense. Increase --timeout only when appropriate. |
 
 The full pipeline prepares usable local inputs and runs installed tools; it cannot guarantee successful reconstruction without adequate imagery, masks, overlap and calibration. No physical capture or actual COLMAP reconstruction is claimed by mocked subprocess tests.
+
+## Verified repeatable capture for the current bottle rig
+
+The live 16-step locked-focus scan `scan_20260912_192707_5748c83f` captured 64 sharp 2312x1736 camera images with matching empty-table backgrounds. Each capture took approximately 2.4 seconds. A 24-step attempt overran its 2.5-second interval; use 16 steps for margin at the table's actual 60-second period.
+
+Capture backgrounds only with the bottle removed:
+
+```powershell
+python -m windows_client.client --node http://192.168.127.145:8000 --capture-backgrounds --capture-profile quad-sharp --focus-mode manual --lens-position 7.05 --camera-timeout-ms 1000
+```
+
+Replace the bottle and capture with the same settings:
+
+```powershell
+python -m windows_client.client --node http://192.168.127.145:8000 --full-scan --steps 16 --focus-mode manual --lens-position 7.05 --camera-timeout-ms 1000 --no-run-colmap
+```
+
+The 7.05 setting is measured on this rig, not a universal focus value. Recheck focus if distances change. All capture metadata is preserved in manifest capture_logs. The full-scan profile uses 4:3 input/output to preserve framing; quadrant splitting does not add a crop beyond dividing the four views.
+
+COLMAP 4.2.0 was exercised on the actual scan. A representative image yielded 403 masked features versus about 40 in the old scan. Independent camera estimation registered only two images/31 points; shared fixed-focus camera intrinsics did not yield a usable model. The bottle is mostly plain and reflective. Sharp capture is fixed; no complete bottle reconstruction is claimed. A textured matte surface would be the next physical improvement, but no synthetic texture or fake model was added.
+
+The runner detects portable COLMAP under Downloads and invokes bin/colmap.exe directly with PATH/QT_PLUGIN_PATH configured; the shipped COLMAP.bat wrapper failed on quoted OneDrive workspace paths. Fixed-focus scans group intrinsics by physical camera using per-camera input folders while retaining the flat image/mask exports. Sparse outputs registering fewer than half the images are labeled sparse_partial and include counts. Windows paths with spaces, metadata, profile payloads and command grouping have regression coverage.

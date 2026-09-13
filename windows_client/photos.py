@@ -9,7 +9,7 @@ from windows_client.scan import load_manifest, safe_file, capture_frames, proces
 
 
 def photo_catalog(scan, kind="all", offset=0, limit=48):
-    if kind not in ("all", "used", "backgrounds") or offset < 0 or not 1 <= limit <= 96:
+    if kind not in ("all", "used", "backgrounds", "reconstruction", "model_inputs") or offset < 0 or not 1 <= limit <= 96:
         raise ValueError("Invalid photo filter or page (limit 1-96, offset >= 0)")
     scan = Path(scan)
     manifest = load_manifest(scan)
@@ -32,6 +32,17 @@ def photo_catalog(scan, kind="all", offset=0, limit=48):
         items = [f for f in items if f["used"]]
     elif kind == "backgrounds":
         items = backgrounds
+    elif kind == 'model_inputs':
+        from photogrammetry.learned_workspace import active_base
+        base=active_base(scan)+'/model_inputs'
+        items=[dict(file=base+'/'+Path(f['file']).name+'.png',camera_id=f['camera_id'],step=f['step'],used=True,model_input=True)
+               for f in manifest['frames'] if (scan/base/(Path(f['file']).name+'.png')).is_file()]
+    elif kind == 'reconstruction':
+        from photogrammetry.learned_workspace import active_base
+        base=active_base(scan)+'/images'
+        items=[dict(file=base+'/'+Path(f['file']).name,camera_id=f['camera_id'],
+                    angle_deg=f.get('angle_deg',0),step=f['step'],used=None,reconstruction=True)
+               for f in manifest['frames'] if (scan/base/Path(f['file']).name).is_file()]
     return dict(items=items[offset:offset+limit], total=len(items), offset=offset, limit=limit,
                 frames_total=len(processing_frames(manifest)), frames_used=None if selected is None else len(selected),
                 backgrounds_total=len(backgrounds), selection_inferred=inferred)
@@ -44,6 +55,11 @@ def thumbnail(scan, filename, size=240):
     manifest = load_manifest(scan)
     allowed = {f["file"] for f in capture_frames(manifest)}
     allowed.update(c["background"] for c in manifest["cameras"] if c.get("background"))
+    allowed.update('outputs/full_photogrammetry/images/'+Path(f['file']).name for f in manifest['frames'])
+    allowed.update('outputs/worldmirror2/images/'+Path(f['file']).name for f in manifest['frames'])
+    allowed.update('outputs/vggt/images/'+Path(f['file']).name for f in manifest['frames'])
+    for engine in ('vggt','worldmirror2'):
+        allowed.update('outputs/'+engine+'/model_inputs/'+Path(f['file']).name+'.png' for f in manifest['frames'])
     if filename not in allowed:
         raise ValueError("Photo is not listed in this scan's manifest")
     directory = filename.split("/", 1)[0]

@@ -13,13 +13,15 @@ def publish(scan, workspace, data):
           f"Combined frames: {data['combined_count']}; split images: {data['split_count']}",
           f"Actual combined dimensions: {data['actual_combined_dimensions']}; split: {data['actual_split_dimensions']}",
           '## Capture settings','```json',json.dumps(data['capture_settings'],indent=2),'```',
+          '## Orientation and object crops','```json',json.dumps(data.get('image_preprocessing',{}),indent=2),'```',
           '## Masks',f"Generated: {data['mask_generation_applied']}; settings: {data['mask_settings']}",
           f"Coverage percentages: {data['mask_coverage_stats']}",
           'Inspect reports/mask_contact_sheet.jpg and reports/mask_inspection/. White includes pixels; black excludes them.',
           '## Sharpness',f"Per-camera averages: {data['sharpness_stats']['per_camera_average']}",
           'Per-image scores: reports/sharpness_report.csv. The threshold is heuristic, not a focus guarantee.',
           '## Reconstruction',f"COLMAP detected: {data['colmap_detected']}; version: {data['colmap_version']}",
-          f"COLMAP output: {data.get('colmap_output_path')}", 'Commands actually run:', '```json',json.dumps(data['colmap_commands'],indent=2),'```',
+          f"COLMAP output: {data.get('colmap_output_path')}", f"Alignment summary: {data.get('reconstruction_summary', {})}", 'Commands actually run:', '```json',json.dumps(data['colmap_commands'],indent=2),'```',
+          '## Phase 2 mesh',f"Status: {data.get('mesh_status','not run')}",'```json',json.dumps(data.get('mesh_commands',[]),indent=2),'```',
           f"RealityCapture/RealityScan: {data['realitycapture_export_path']}",'## Warnings and errors']
     text += ['- '+w for w in data['warnings']+data['errors']] or ['None recorded.']
     text += ['## Next action',data['next_action'],'Original images are preserved. No quick-preview mesh is presented as photogrammetry.']
@@ -31,7 +33,7 @@ def publish(scan, workspace, data):
     for key in ('full_photogrammetry_mode','capture_width','capture_height','actual_combined_dimensions','actual_split_dimensions',
                 'steps','rotation_seconds','estimated_angles','mask_generation_applied','mask_settings','mask_coverage_stats',
                 'sharpness_stats','colmap_detected','colmap_version','colmap_status','colmap_commands','realitycapture_export_path',
-                'full_workspace_path','report_path','warnings','errors'):
+                'full_workspace_path','report_path','warnings','errors','image_preprocessing','mesh_status'):
         manifest[key]=data.get(key)
     manifest['retain']=True
     write_json(scan/'manifest.json',manifest)
@@ -47,6 +49,12 @@ def update_reconstruction(workspace,result):
     data=json.loads((workspace/'reports/run_report.json').read_text())
     data.update(colmap_detected=result['detected'],colmap_version=result['version'],colmap_status=result['status'],
                 colmap_commands=result['commands'],colmap_output_path=result['output_path'],next_action=result['next_action'])
-    data['warnings']+=result['warnings'];data['errors']+=result['errors']
+    data['warnings']=list(dict.fromkeys(data.get('pre_reconstruction_warnings',data['warnings'])+result['warnings']))
+    data['errors']=list(data.get('validation_errors', []))+result['errors']
+    data['mesh_status']=result.get('mesh_status')
+    data['mesh_commands']=result.get('mesh_commands',[])
+    data['mesh_errors']=result.get('mesh_errors',[])
+    data['errors']+=data['mesh_errors']
+    data['reconstruction_summary']={k:result.get(k) for k in ('registered_images','input_images','points3D','camera_grouping')}
     metadata=json.loads((workspace/'workspace.json').read_text())
     return publish(Path(metadata['scan_path']),workspace,data)

@@ -1,4 +1,49 @@
+New: [surface improvements, research and TRELLIS.2](docs/surface_research.md). The web runner now rebuilds surfaces from saved depth, compares original/fused/cleaned results, and offers an explicitly labeled single-photo AI alternative. [SAM 2 masks](docs/sam2_cleanup.md) remain available.
+
+Capture settings and shoe verification: [capture quality](docs/capture_quality.md). Optional newer backend: [WorldMirror 2.0](docs/worldmirror.md). Processing gamma now defaults to 1 (neutral).
+
+> **Browser default: WorldMirror 2.0.** VGGT remains selectable and is the CLI default. Processing gamma defaults to 1 (unchanged brightness); sensor gain and shutter control capture brightness. COLMAP is retained as a legacy backend and is not executed by the active runner. See [VGGT setup, usage and outputs](docs/vggt.md).
+
 # Pi Showcase Scanner
+
+## Full browser runner (physical quad-camera setup)
+
+The runner now has **phase 1: sparse alignment** and **phase 2: actual 3D mesh**.
+Mask-based crops with 15% enlargement and 90° clockwise orientation are enabled by default.
+Each camera keeps one fixed crop across the scan, preserving shared intrinsics.
+Progress bars cover capture, transfer, image preparation, COLMAP counters and mesh loading.
+Inspect **Cropped COLMAP inputs** in the photo gallery; phase 2 displays the actual surface
+and offers its full PLY download. Automatic continuation to mesh is enabled by default.
+
+After the one-time Python setup below, double-click **Launch Scanner.cmd**. It opens
+**http://127.0.0.1:49848/** and reuses an existing runner if one is already running.
+Keep its server window open. Routine capture and reconstruction need no CLI commands.
+The Pi node must already be running; the browser does not start a stopped Pi service.
+
+1. Click **Connect** to check the Pi and matching backgrounds.
+2. Only when backgrounds need updating: remove the object, check **Object removed**, and click **Capture backgrounds**.
+3. Replace the object and run the table at its usual 60-second rotation. Click **Capture object + reconstruct**.
+4. Watch capture progress and live COLMAP logs. The completed scan is selected automatically;
+   its actual colored sparse points appear in the orbit/zoom viewer, with registered-image and camera-model counts.
+5. Inspect source photos, foreground masks and reports. **Prepare + reconstruct** rebuilds the selected
+   workspace; **Retry COLMAP** reuses prepared images/masks. Existing Pi scans can also be downloaded by ID.
+
+The browser defaults to the tested locked-focus profile: 16 positions, 60 seconds,
+4624×3472 combined images, lens position 7.05, 1000 ms settling, matching sensor/viewfinder
+mode and ZSL. Lens position is rig-specific; recheck if the camera/object distance changes.
+An interval below the capture budget is rejected. The motor is controlled physically, not by this software.
+
+COLMAP now always uses **one shared intrinsic model per physical camera** (cam_01…cam_04),
+across every rotation position. Per-camera image folders and `--ImageReader.single_camera_per_folder 1`
+enforce this; a database audit verifies camera identity. The four cameras can have different intrinsics.
+These values are estimated per reconstruction, not a saved calibrated rig. Keep focus, resolution and crops fixed.
+
+See [the complete runner commands and outputs](docs/browser_runner.md).
+Sparse points are not a finished surface: partial alignment and failures remain clearly labeled.
+Optional dense reconstruction/meshing can be launched in the browser (requires suitable COLMAP/CUDA support);
+phase 1 shows the sparse alignment; phase 2 displays the actual reconstructed triangle mesh and links the full PLY.
+Refreshing the page reconnects to an active job while the server remains running.
+Jobs do not survive a server restart; use receive/retry afterward. Physical captures are retained.
 
 A local engineering demo: **Pi capture (mock or rpicam) over HTTP â†’ verified image transfer â†’ coarse 3D model â†’ browser viewer**, plus a separate image workspace for future detailed reconstruction. The original standalone synthetic flow is also available.
 
@@ -339,6 +384,8 @@ Add `--dry-run` to the splitter command to validate without saving changes. Spli
 
 ## Full Photogrammetry Mode
 
+Full mode now defaults to the hardware-tested `quad-sharp` profile: matching 4624x3472 sensor/capture modes, ZSL, a targeted focus window, continuous autofocus with 6000ms settling, JPEG quality 95 and eight steps per minute. Real HTTP captures verified focused state and sharper bottle detail. Explicit CLI values override these defaults; `--capture-profile standard` opts into the earlier behavior.
+
 Full mode preserves high-resolution captures, splits combined quad frames, generates foreground masks and sharpness diagnostics, stages a COLMAP workspace and RealityCapture/RealityScan image layers, and writes a complete report. The quick visual-hull flow remains available separately.
 
 Update the Pi code and restart its API before using full mode. Capture backgrounds with the object removed; the full client checks matching settings and prompts for empty-table capture/replacing the object if needed. Use 3840x2160 combined or higher: 1920x1080 combined leaves only 960x540 per camera. Actual sizes are reported, never assumed.
@@ -355,3 +402,17 @@ COLMAP is optional: install a local Windows distribution and add it to PATH, set
 Inspect masks and before/after images under `outputs/full_photogrammetry/reports/`, sharpness scores in `sharpness_report.csv`, and mapping under `outputs/inspection/`. Configure order/crops/rotation in `config/quad_split.json`. Import `realitycapture/images/` using its README instructions and mask layers. Fixed-background turntable scenes require effective masking; shiny, transparent and untextured objects may still fail.
 
 See [Full photogrammetry workflow](docs/full_photogrammetry_workflow.md) for background commands, full-scan defaults, installation, output paths, preservation/retries, mask morphology, dense meshing and troubleshooting.
+
+### Capture focus controls
+
+`--sensor-mode`, `--viewfinder-mode`, `--viewfinder-width`, `--viewfinder-height`, `--zsl`, `--autofocus-window`, `--autofocus-range` and `--jpeg-quality` pass through to the Pi. Saved capture logs include camera metadata. Background matching includes these controls, so old references are not silently reused. An upfront timing check rejects settling periods that cannot fit the scan interval.
+
+Use `--capture-backgrounds --capture-profile quad-sharp` for matching empty-table references. A locked, experimentally measured `--focus-mode manual --lens-position VALUE` can permit shorter settling periods and more views, but use exactly the same lens position for background and object capture. The focus-window coordinates and locked focus are rig-specific.
+
+For the currently tested bottle rig, use locked focus and 16 steps:
+
+```powershell
+python -m windows_client.client --node http://192.168.127.145:8000 --full-scan --steps 16 --focus-mode manual --lens-position 7.05 --camera-timeout-ms 1000 --no-run-colmap
+```
+
+Matching backgrounds were captured with `--capture-backgrounds --capture-profile quad-sharp --focus-mode manual --lens-position 7.05 --camera-timeout-ms 1000`. Do not reuse 7.05 after changing camera distance without a focus check. Real capture/transfer/splitting and mask generation were verified; the plain bottle still has insufficient reliable matches for a complete COLMAP model. See the workflow guide's live-test results.

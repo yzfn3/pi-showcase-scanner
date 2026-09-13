@@ -16,6 +16,7 @@ function controls() {
   $('frame-limit').disabled=busy||!$('scans').value;
   $('use-all').disabled=busy||!$('scans').value;
   $('quality').disabled=busy||!$('scans').value;
+  window.runnerControls?.();
 }
 async function refresh(preferred=$('scans').value||initialScan) {
   const data=await api('/api/scans');scans=data.scans;defaultMaxFrames=data.default_max_frames??0;defaultGrid=data.default_grid??96;$('root').textContent=data.root;
@@ -28,15 +29,16 @@ async function refresh(preferred=$('scans').value||initialScan) {
 async function select() {
   const version=++selectionVersion;
   const scan=scans.find(s=>s.id===$('scans').value), result=scan?.result;
+  window.loadFullResult?.(scan?.id);
   photoVersion++;photoOffset=0;$('photo-grid').replaceChildren();$('photo-page').textContent='';
   $('photos-prev').disabled=true;$('photos-next').disabled=true;
   $('photo-summary').textContent='Select a scan to inspect its photos.';
   $('photo-count').textContent=scan?`(${scan.photo_count??scan.frames})`:'';
   $('full-output').hidden=!scan?.full_workspace;
   $('full-output').textContent=scan?.full_workspace?`Full photogrammetry: ${scan.full_status}. Workspace: ${scan.full_workspace}`:'';
-  if(scan?.full_workspace?.replaceAll('\\','/').endsWith('/outputs/full_photogrammetry')){
+  if(scan?.full_workspace){
     const report=document.createElement('a');report.textContent=' Open run report';
-    report.href=`/scans/${encodeURIComponent(scan.id)}/outputs/full_photogrammetry/reports/run_report.md`;
+    report.href=`/scans/${encodeURIComponent(scan.id)}/outputs/${['vggt','worldmirror2'].includes(scan.engine)?scan.engine:'full_photogrammetry'}/reports/run_report.md`;
     report.target='_blank';report.rel='noopener';$('full-output').append(report);
   }
 
@@ -90,17 +92,24 @@ async function select() {
 }
 async function job(request) {
   if(busy)return;
-  busy=true;controls();status(request.action==='discard'?'Deleting generated images and models…':request.action==='process'?'Carving silhouettes and preparing reconstruction images…':request.action==='generate'?'Rendering a new random object…':'Copying and validating scan images…');
-  $('state').textContent='WORKING';
+  busy=true;controls();status('Starting '+request.action+'…');
   try {
     const {job_id}=await api('/api/jobs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(request)});
+    await watchJob(job_id,request);
+  }catch(e){status(e.message,true);busy=false;controls();}
+}
+async function watchJob(job_id,request={}) {
+  busy=true;controls();$('state').textContent='WORKING';
+  try {
     let current;
     do {
-      await new Promise(resolve=>setTimeout(resolve,350));
       current=await api(`/api/jobs/${job_id}`);
+      window.runnerProgress?.(current);
+      if(['queued','running'].includes(current.status))await new Promise(resolve=>setTimeout(resolve,750));
     }while(['queued','running'].includes(current.status));
     if(current.status==='failed')throw new Error(current.error);
-    await refresh(current.scan_id);
+    await refresh(current.scan_id||$('scans').value);
+    window.runnerFinished?.(current);
     status(current.result?.quick?.reason||current.message||(request.action==='discard'?'Generation deleted.':request.action==='process'?'Complete. Quick model exported; detailed reconstruction images prepared.':'New random scan ready. Previous generated scans deleted. Click Run preview.'));
   }catch(e){status(e.message,true);$('state').textContent='NEEDS ATTENTION';}
   finally{busy=false;controls();}
@@ -140,13 +149,13 @@ async function loadPhotos(){
     const data=await api(`/api/scans/${encodeURIComponent(sid)}/photos?filter=${$('photo-filter').value}&offset=${photoOffset}&limit=48`);
     if(version!==photoVersion||sid!==$('scans').value)return;
     const usage=data.frames_used===null?'No quick preview has run yet.':`${data.frames_used} / ${data.frames_total} photos used in the last quick preview.`;
-    $('photo-summary').textContent=usage+(data.selection_inferred?' Older result: used-photo selection inferred from its saved count.':'')+(data.total===0?' No photos match this filter.':'');
+    $('photo-summary').textContent=$('photo-filter').value==='model_inputs'?`${data.total} exact masked and resized images submitted to the reconstruction model.`:$('photo-filter').value==='reconstruction'?`${data.total} prepared reconstruction images, after orientation and crop. The image limit controls how many are submitted.`:usage+(data.selection_inferred?' Older result: used-photo selection inferred from its saved count.':'')+(data.total===0?' No photos match this filter.':'');
     for(const item of data.items){
       const card=document.createElement('button');card.type='button';card.className='photo-card';
       const img=document.createElement('img');img.src=photoUrl(sid,item.file,240);img.alt=item.file;img.loading='lazy';img.decoding='async';
       const name=document.createElement('span');name.className='photo-name';name.textContent=item.file.split('/').pop();
       const badge=document.createElement('span');badge.className='photo-badge'+(item.used?' used':'');
-      badge.textContent=item.background?'Background':item.used===null?'Not processed yet':item.used?'Used in quick preview':'Not used in quick preview';
+      badge.textContent=item.model_input?'Used by 3D model':item.reconstruction?'Prepared image':item.background?'Background':item.used===null?'Not processed yet':item.used?'Used in quick preview':'Not used in quick preview';
       const meta=document.createElement('span');meta.className='photo-meta';meta.textContent=item.camera_id+(item.angle_deg===undefined?'':` · ${Number(item.angle_deg.toFixed(1))}°`);
       card.append(img,name,badge,meta);
       card.onclick=()=>{ $('photo-large').src=photoUrl(sid,item.file,640);$('photo-large').alt=item.file;$('photo-caption').textContent=`${item.file} · ${badge.textContent}`;$('photo-dialog').showModal(); };

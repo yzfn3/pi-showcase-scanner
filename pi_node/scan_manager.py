@@ -209,7 +209,8 @@ class ScanService:
     def _background_settings(self, params):
         keys = ("cameras", "combined_quad_output", "capture_width", "capture_height",
                 "exposure_time", "gain", "awb", "focus_mode", "lens_position",
-                "camera_timeout_ms", "autofocus_on_capture", "awbgains")
+                "camera_timeout_ms", "autofocus_on_capture", "awbgains", "sensor_mode", "viewfinder_mode",
+                "viewfinder_width", "viewfinder_height", "zsl", "autofocus_window", "autofocus_range", "jpeg_quality")
         return {"backend": getattr(self.backend, "name", "mock"), **{k: params[k] for k in keys}}
 
     def _publish_backgrounds(self, folder, manifest, params):

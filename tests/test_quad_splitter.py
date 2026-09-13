@@ -54,7 +54,7 @@ class QuadSplitterTests(unittest.TestCase):
             self.assertEqual(len(result['contact_sheet_files']), 2)
             for i,color in enumerate(((255,0,0),(0,255,0),(0,0,255),(255,255,0)),1):
                 with Image.open(scan/f'raw/step_000_cam_{i:02d}.jpg') as image:
-                    self.assertEqual(image.size,(100,60))
+                    self.assertEqual(image.size,(60,100))
                     self.assertLess(np.abs(np.array(image.getpixel((50,30)))-color).max(),5)
             for name in result['contact_sheet_files']:
                 with Image.open(scan/name) as image: self.assertEqual(image.width,800)

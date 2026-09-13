@@ -296,3 +296,7 @@ Example request:
 Response when reusable: `{"matching":true,"captured_at":"2026-09-12T18:00:00Z"}`.
 Response when absent/mismatched: `{"matching":false,"reason":"Background capture settings differ"}`.
 Invalid settings return the existing 400 error envelope. Update and restart the Pi node before using the new Windows full-scan command. Existing endpoints remain compatible.
+
+### Sensor and focus controls
+
+Background capture, background matching and scan start also accept `sensor_mode` / `viewfinder_mode` as WIDTH:HEIGHT[:BITS[:P|U]], paired `viewfinder_width` / `viewfinder_height`, boolean `zsl`, normalized `autofocus_window` x,y,w,h, `autofocus_range` normal/macro/full, and `jpeg_quality` 1..100. These are stored in settings and included in background compatibility checks. Capture logs include the camera metadata JSON (focus state, lens position, exposure and scaler crop when supported). ZSL keeps capture and viewfinder streams configured together; explicit matching sensor modes avoid the observed aspect-ratio mode switch on this quad kit.

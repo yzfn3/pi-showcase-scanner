@@ -133,7 +133,7 @@ class NodeClient:
     def capture_backgrounds(self, *, key=None, **settings):
         return self.json("POST", "/backgrounds/capture", body=settings, key=key or uuid.uuid4().hex)
 
-    def wait(self, scan_id, *, timeout=300.0, poll_interval=0.5):
+    def wait(self, scan_id, *, timeout=300.0, poll_interval=0.5, on_progress=None):
         if timeout <= 0 or poll_interval <= 0:
             raise NodeClientError("Scan timeout and poll interval must be positive")
         deadline = time.monotonic()+timeout
@@ -144,6 +144,8 @@ class NodeClient:
                 raise NodeClientError("Node returned invalid scan status")
             progress = (state.get("state"), state.get("current_step"), state.get("files_captured"))
             if progress != last:
+                if on_progress:
+                    on_progress(state)
                 LOG.info("%s: %s | step %s/%s | %s images", scan_id, state["state"],
                          state.get("current_step"), state.get("total_steps"), state.get("files_captured"))
                 last = progress
@@ -193,7 +195,7 @@ class NodeClient:
                 LOG.warning("Retrying image %s (%d/%d): %s", record["file"], attempt+1, self.retries, exc)
                 self._pause(attempt, deadline)
 
-    def download_scan(self, scan_id, root, *, timeout=300.0):
+    def download_scan(self, scan_id, root, *, timeout=300.0, on_progress=None):
         if not isinstance(scan_id, str) or not ID_PATTERN.fullmatch(scan_id):
             raise NodeClientError("Invalid scan ID")
         if timeout <= 0:
@@ -254,6 +256,7 @@ class NodeClient:
                         raise NodeClientError("Local manifest was modified; refusing to overwrite it")
             for index, record in enumerate(records.values(), 1):
                 self._download(scan_id, folder, record, deadline)
+                if on_progress:on_progress(index,len(records))
                 if index % 4 == 0 or index == len(records):
                     LOG.info("Verified images: %d/%d", index, len(records))
             validate_manifest(folder, manifest)

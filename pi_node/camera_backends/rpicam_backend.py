@@ -38,6 +38,8 @@ class RpicamBackend:
             output = ((result.stdout or "") + "\n" + (result.stderr or "")).strip()[-8192:]
             self.last_output = output
             if result.returncode:
+                if 'Pipeline handler in use' in output or 'Device or resource busy' in output:
+                    raise RuntimeError('Camera is in use. Close rpicam-hello or other camera applications, then retry. '+output)
                 raise RuntimeError(f"Camera command exited {result.returncode}: {output}")
             return output
         except (OSError, subprocess.TimeoutExpired, RuntimeError) as exc:
@@ -78,13 +80,18 @@ class RpicamBackend:
         if path.exists():
             raise NodeError(f"Refusing to overwrite captured image: {path}")
         temporary = path.with_name(path.name + ".part")
+        metadata_path = path.with_name(path.name + '.metadata.part.json')
         camera_timeout = settings.get("camera_timeout_ms") or 1000
         autofocus = settings.get("autofocus_on_capture", False)
         use_lens = not autofocus or settings.get("focus_mode") == "manual"
         args = ["--nopreview", "--camera", str(camera.get("device_index", 0)),
                 "--timeout", str(camera_timeout), "--encoding", "jpg", "--output", str(temporary)]
+        args.extend(['--metadata', str(metadata_path), '--metadata-format', 'json'])
         flags = {"capture_width": "--width", "capture_height": "--height", "exposure_time": "--shutter",
-                 "gain": "--gain", "awb": "--awb", "awbgains": "--awbgains", "focus_mode": "--autofocus-mode", "lens_position": "--lens-position"}
+                 "gain": "--gain", "awb": "--awb", "awbgains": "--awbgains", "focus_mode": "--autofocus-mode", "lens_position": "--lens-position",
+                 "sensor_mode": "--mode", "viewfinder_mode": "--viewfinder-mode",
+                 "viewfinder_width": "--viewfinder-width", "viewfinder_height": "--viewfinder-height",
+                 "autofocus_window": "--autofocus-window", "autofocus_range": "--autofocus-range", "jpeg_quality": "--quality"}
         for key, flag in flags.items():
             if key == "lens_position" and not use_lens:
                 continue
@@ -92,6 +99,8 @@ class RpicamBackend:
                 args.extend([flag, str(settings[key])])
         if autofocus and settings.get("focus_mode") != "continuous":
             args.append("--autofocus-on-capture")
+        if settings.get('zsl'):
+            args.append('--zsl')
         if use_lens and settings.get("lens_position") is not None and settings.get("focus_mode") is None:
             args.extend(["--autofocus-mode", "manual"])
         started = time.monotonic()
@@ -106,13 +115,22 @@ class RpicamBackend:
                 image.verify()
             temporary.replace(path)
             self.last_error = None
+            metadata = None
+            metadata_error = None
+            if metadata_path.exists():
+                try:
+                    metadata = json.loads(metadata_path.read_text())
+                except (OSError, ValueError) as exc:
+                    metadata_error = str(exc)
             return dict(command=[self.command, *args], output=output,
+                        metadata=metadata, metadata_error=metadata_error,
                         duration_seconds=round(time.monotonic()-started, 6), dimensions=list(dimensions))
         except Exception as exc:
             self.last_error = str(exc)
             raise
         finally:
             temporary.unlink(missing_ok=True)
+            metadata_path.unlink(missing_ok=True)
 
 
 def main(argv=None):

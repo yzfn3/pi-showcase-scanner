@@ -1,5 +1,6 @@
 {
   "mode": "quadrants",
+  "rotations": {"cam_01":90,"cam_02":90,"cam_03":90,"cam_04":90},
   "camera_order": ["cam_01", "cam_02", "cam_03", "cam_04"],
   "crops": {
     "cam_01": {"x": 0.0, "y": 0.0, "w": 0.5, "h": 0.5},

@@ -13,7 +13,7 @@ def sharpness(image):
     return float(lap.var()) if lap.size else 0.0
 
 
-def inspect(scan, manifest, workspace):
+def inspect(scan, manifest, workspace, progress=None):
     warnings, errors, rows, dimensions = [], [], [], set()
     frames = manifest['frames']
     expected = manifest.get('steps', len({f['step'] for f in frames})) * len(manifest['cameras'])
@@ -24,7 +24,7 @@ def inspect(scan, manifest, workspace):
         if not manifest.get('quad_split_config'): errors.append('Missing quad split configuration')
         for name in manifest.get('contact_sheet_files', []):
             if not (scan/name).is_file(): errors.append(f'Missing contact sheet: {name}')
-    for f in frames:
+    for index,f in enumerate(frames,1):
         with Image.open(scan/f['file']) as im:
             im.load(); dimensions.add(im.size)
             score = sharpness(im)
@@ -32,12 +32,13 @@ def inspect(scan, manifest, workspace):
                 warnings.append(f"Uniform image: {f['file']}")
         rows.append(dict(filename=(scan/f['file']).name, camera=f['camera_id'], score=round(score, 3)))
         if 'angle_deg' not in f or 'step' not in f: errors.append(f"Missing angle/step: {f['file']}")
+        if progress:progress(dict(stage='Measuring image sharpness',done=index,total=len(frames)))
     if len(dimensions) != 1: warnings.append('Split dimensions differ across images; check camera crops')
     if any(min(w,h)<1080 or max(w,h)<1920 for w,h in dimensions):
         warnings.append('Split resolution is low for full photogrammetry: prefer at least 1920x1080 per camera (3840x2160 combined).')
     averages = {c:round(float(np.mean([r['score'] for r in rows if r['camera']==c])),3) for c in {r['camera'] for r in rows}}
     blurry = [r['filename'] for r in rows if r['score'] < 40]
-    if blurry: warnings.append(f'{len(blurry)} images may be blurry (Laplacian variance below 40 at max 1024px; heuristic only).')
+    if blurry: warnings.append(f'{len(blurry)} images have low whole-image edge energy (variance below 40 at max 1024px). Smooth objects/backgrounds also cause low scores; inspect object detail before concluding that focus is poor.')
     with (workspace/'reports/sharpness_report.csv').open('w', newline='', encoding='utf-8') as out:
         writer=csv.DictWriter(out, fieldnames=['filename','camera','score']); writer.writeheader(); writer.writerows(rows)
     if frames:

@@ -145,7 +145,7 @@ def contact_sheet(rows, path):
     sheet.save(path, quality=80)
 
 
-def _split(scan, config, dry_run, inspection):
+def _split(scan, config, dry_run, inspection, progress=None):
     started = time.perf_counter()
     paths = combined_paths(scan)
     if not paths:
@@ -176,7 +176,8 @@ def _split(scan, config, dry_run, inspection):
             # Mock mosaics contain the known label footer in every quadrant.
             if source.get("mock_mode") and source["cameras"][0].get("preview_crop"):
                 camera["preview_crop"] = source["cameras"][0]["preview_crop"]
-        for frame in source["combined_frames"]:
+        for index,frame in enumerate(source["combined_frames"],1):
+            if progress:progress(dict(stage='Splitting and rotating camera views',done=index-1,total=len(source['combined_frames'])))
             file = safe_file(scan, frame["file"], "raw_combined")
             step = frame["step"]
             combined_rows.append((file, step, "quad", "raw_combined"))
@@ -187,6 +188,14 @@ def _split(scan, config, dry_run, inspection):
                     if output.exists():
                         raise ValueError("Duplicate step numbers in combined manifest")
                     view.save(output, quality=95)
+                    camera=next(c for c in cameras if c['id']==cid)
+                    original_crop=source['cameras'][0].get('preview_crop') if source.get('mock_mode') else None
+                    if original_crop:
+                        slot=SLOTS[config['camera_order'].index(cid)]
+                        box=crop_box(config['crops'][slot],image.size)
+                        region=Image.new('L',(box[2]-box[0],box[3]-box[1]))
+                        region.paste(255,tuple(original_crop))
+                        camera['preview_crop']=list(region.rotate(-config.get('rotations',{}).get(cid,0),expand=True).getbbox())
                     frames.append({**frame, "file":relative, "camera_id":cid, "source_file":frame["file"]})
                     split_rows.append((output, step, cid, "split raw"))
         if background:
@@ -246,7 +255,7 @@ def _split(scan, config, dry_run, inspection):
         return manifest
 
 
-def split_scan(scan, config=None, *, dry_run=False, contact_sheets=True):
+def split_scan(scan, config=None, *, dry_run=False, contact_sheets=True, progress=None):
     scan = Path(scan).resolve()
     layout = load_config(config)
     if (scan / ".receiving").exists():
@@ -260,7 +269,7 @@ def split_scan(scan, config=None, *, dry_run=False, contact_sheets=True):
     try:
         if (scan / ".receiving").exists():
             raise ValueError("Transfer is active; wait before splitting")
-        return _split(scan, layout, dry_run, contact_sheets)
+        return _split(scan, layout, dry_run, contact_sheets,progress)
     finally:
         lock.unlink(missing_ok=True)
 

@@ -11,3 +11,10 @@ Thumbs.db
 
 pi_node/backgrounds/
 pi_node/test_captures/
+tools/vggt/
+models/
+
+tools/hyworld2/
+
+tools/sam2/
+tools/trellis-runtime/
